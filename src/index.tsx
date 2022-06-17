@@ -17,6 +17,20 @@ const PlacePicker = NativeModules.PlacePicker
       }
     );
 
+/**
+ *
+ * @param {Number} a
+ * @returns {Number}
+ */
+export function sqrt(a: number): Promise<number> {
+  return PlacePicker.sqrt(a);
+}
+/**
+ *
+ * @param {Number} a
+ * @param {Number} b
+ * @returns {number} results
+ */
 export function multiply(a: number, b: number): Promise<number> {
   return PlacePicker.multiply(a, b);
 }

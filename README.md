@@ -6,6 +6,8 @@ Pick any place with single click
 
 ```sh
 npm install react-native-place-picker
+# or
+yarn add react-native-place-picker
 ```
 
 ## Usage
