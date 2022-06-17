@@ -7,7 +7,6 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		6A57499A285CDE8100D4B99F /* PlacePicker.m in Sources */ = {isa = PBXBuildFile; fileRef = B3E7B5891CC2AC0600A0062D /* PlacePicker.m */; };
 		F4FF95D7245B92E800C19C63 /* PlacePicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4FF95D6245B92E800C19C63 /* PlacePicker.swift */; };
 /* End PBXBuildFile section */
 
@@ -117,7 +116,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				F4FF95D7245B92E800C19C63 /* PlacePicker.swift in Sources */,
-				6A57499A285CDE8100D4B99F /* PlacePicker.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

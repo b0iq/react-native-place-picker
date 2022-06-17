@@ -17,20 +17,22 @@ const PlacePicker = NativeModules.PlacePicker
       }
     );
 
-/**
- *
- * @param {Number} a
- * @returns {Number}
- */
-export function sqrt(a: number): Promise<number> {
-  return PlacePicker.sqrt(a);
+export interface PickerCoordinates {
+  latitude: number,
+  longitude: number,
 }
-/**
- *
- * @param {Number} a
- * @param {Number} b
- * @returns {number} results
- */
-export function multiply(a: number, b: number): Promise<number> {
-  return PlacePicker.multiply(a, b);
+export interface PickerOptions {
+  initialCoordinates: PickerCoordinates
+  title: String;
+}
+export interface PickerResults extends PickerCoordinates {
+  canceled: boolean;
+}
+
+export function pickPlace(options: PickerOptions | undefined = undefined): Promise<PickerResults> {
+  if (options !== undefined) {
+    return PlacePicker.pickPlaceWithOptions(options)
+  } else {
+    return PlacePicker.pickPlace()
+  }
 }

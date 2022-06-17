@@ -1,19 +1,22 @@
 import * as React from 'react';
 
-import { StyleSheet, View, Text } from 'react-native';
-import { multiply, sqrt } from 'react-native-place-picker';
+import { StyleSheet, View, Button } from 'react-native';
+import { pickPlace } from 'react-native-place-picker';
 
 export default function App() {
-  const [result, setResult] = React.useState<number | undefined>();
 
-  React.useEffect(() => {
-    multiply(3, 7).then(setResult);
-    sqrt(3).then(console.log);
-  }, []);
+  const pressHandler = () => {
+    pickPlace({title: "YES", initialCoordinates: {
+      latitude: 25.2048,
+      longitude: 55.2708
+    }}).then((results) => {
+      console.log(results);
+    }).catch(console.log)
+  }
 
   return (
     <View style={styles.container}>
-      <Text>Result: {result}</Text>
+      <Button title='Pick place' onPress={pressHandler}/>
     </View>
   );
 }
