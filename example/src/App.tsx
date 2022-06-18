@@ -5,8 +5,8 @@ import { pickPlace } from 'react-native-place-picker';
 
 export default function App() {
 
-  const pressHandler = () => {
-    pickPlace({title: "YES", initialCoordinates: {
+  const pressHandlerWithOptions = () => {
+    pickPlace({title: "Choose Place", initialCoordinates: {
       latitude: 25.2048,
       longitude: 55.2708
     }}).then((results) => {
@@ -14,8 +14,13 @@ export default function App() {
     }).catch(console.log)
   }
 
+  const pressHandler = () => {
+    pickPlace().then(console.log).catch(console.log)
+  }
+
   return (
     <View style={styles.container}>
+      <Button title='Pick place with options' onPress={pressHandlerWithOptions}/>
       <Button title='Pick place' onPress={pressHandler}/>
     </View>
   );

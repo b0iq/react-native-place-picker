@@ -41,4 +41,5 @@ class PlacePicker: NSObject {
     func pickPlace(_ resolve: @escaping RCTPromiseResolveBlock, withRejector reject: RCTPromiseRejectBlock) {
         StartPickingLocation(resolve, reject)
     }
+    
 }

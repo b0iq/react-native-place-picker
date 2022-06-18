@@ -1,13 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.reactnativeplacepicker">
-
-    <application>
-        <activity
-            android:theme="@style/Theme.PlacePickerTheme"
-            android:name=".MapViewController"
-            android:exported="false"
-          />
-    </application>
+  package="com.reactnativeplacepicker">
+<!--  <meta-data-->
+<!--    android:name="com.google.android.geo.API_KEY"-->
+<!--    android:value="AIzaSyDbL2sY8fdZumnqmIs5z8pF0U0ku0vY7Ms" />-->
+  <uses-permission android:name="android.permission.INTERNET" />
+  <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+  <application>
+    <activity
+      android:name=".MapViewController"
+      android:exported="true"
+      android:theme="@style/Theme.PlacePickerTheme" />
+  </application>
 
 </manifest>

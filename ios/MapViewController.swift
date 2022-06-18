@@ -7,7 +7,6 @@
 
 // TODO: Add user search
 // TODO: Add user location
-// TODO: Add handler button
 
 import UIKit
 import MapKit
@@ -40,11 +39,36 @@ class MapViewController: UIViewController {
     }()
     
     let mapPin: UIView = {
-        let view = UIView()
-        // TODO: Add pin image
-        view.backgroundColor = UIColor(white: 0, alpha: 0.5)
-        view.translatesAutoresizingMaskIntoConstraints = false
-        return view
+        let pinImage: UIImageView
+        if #available(iOS 13.0, *) {
+            pinImage = UIImageView(image: UIImage(systemName: "mappin"))
+        } else {
+            pinImage = UIImageView(image: UIImage(named: "mappin"))
+        }
+        pinImage.contentMode = .center
+        pinImage.frame = CGRect(x: 0, y: 0, width: 40, height: 40)
+        pinImage.tintColor = .white
+        let pinContainer = UIView(frame: CGRect(x: 5, y: 4, width: 40, height: 40))
+        pinContainer.layer.cornerRadius = 20
+        pinContainer.backgroundColor = .black
+        pinContainer.addSubview(pinImage)
+        let heightWidth = 10
+        let path = CGMutablePath()
+        path.move(to: CGPoint(x:20, y: 43))
+        path.addLine(to: CGPoint(x:(heightWidth/2) + 20, y: (heightWidth/2) + 43))
+        path.addLine(to: CGPoint(x:heightWidth + 20, y:43))
+        path.addLine(to: CGPoint(x:20, y:43))
+        let shape = CAShapeLayer()
+        shape.path = path
+        shape.fillColor = UIColor.black.cgColor
+        
+        let baseView = UIView()
+        
+        baseView.layer.insertSublayer(shape, at: 0)
+        baseView.addSubview(pinContainer)
+        
+        baseView.translatesAutoresizingMaskIntoConstraints = false
+        return baseView
     }()
     
     let mapPinShadow: UIView = {
@@ -65,27 +89,63 @@ class MapViewController: UIViewController {
         }
     }
     private func setupNavigationBar() {
-        let closeStyle: UIBarButtonItem.SystemItem
+
+        let customCancelButton = UIButton()
+        customCancelButton.tintColor = .gray
         if #available(iOS 13.0, *) {
-            closeStyle = .close
+            let cancelImage = UIImage(systemName: "xmark")
+            customCancelButton.setImage(cancelImage, for: .normal)
         } else {
-            closeStyle = .cancel
+            customCancelButton.setTitle("Cancel", for: .normal)
         }
-        let dismissButton = UIBarButtonItem(barButtonSystemItem: closeStyle, target: self, action: #selector(closePicker))
-        let selectButton = UIBarButtonItem(barButtonSystemItem: .done, target: self, action: #selector(finlizePicker))
-        self.navigationItem.leftBarButtonItem = dismissButton
-        self.navigationItem.rightBarButtonItem = selectButton
+        
+        customCancelButton.addTarget(self, action: #selector(closePicker), for: .touchUpInside)
+        
+        let customDoneButton = UIButton()
+        customDoneButton.tintColor = .gray
+        if #available(iOS 13.0, *) {
+            let checkImage = UIImage(systemName: "checkmark")
+            customDoneButton.setImage(checkImage, for: .normal)
+        } else {
+            customDoneButton.setTitle("Done", for: .normal)
+        }
+        
+        customDoneButton.addTarget(self, action: #selector(finlizePicker), for: .touchUpInside)
+        
+        if #available(iOS 15.0, *) {
+            customDoneButton.configuration = .gray()
+            customCancelButton.configuration = .gray()
+        }
+        
+        let customCancelButtonItem = UIBarButtonItem(customView: customCancelButton)
+        let customDoneButtonItem = UIBarButtonItem(customView: customDoneButton)
+        
+        self.navigationItem.leftBarButtonItem = customCancelButtonItem
+        self.navigationItem.rightBarButtonItem = customDoneButtonItem
+        
+    }
+    override func viewDidDisappear(_ animated: Bool) {
+        if resolver != nil {
+            let coords = mapView.centerCoordinate
+            resolver!(["latitude": coords.latitude, "longitude": coords.longitude, "canceled": true])
+        }
     }
     override func viewDidLoad() {
         super.viewDidLoad()
+        
         setupNavigationBar()
+        
+        
+        mapView.delegate = self
         if let coords = coordinates {
             mapView.region = MKCoordinateRegion(center: coords, latitudinalMeters: 1000, longitudinalMeters: 1000)
         }
-        mapView.delegate = self
+        
+        
         view.addSubview(mapView)
         view.addSubview(mapPinShadow)
         view.addSubview(mapPin)
+        
         NSLayoutConstraint.activate([
             mapPinShadow.centerXAnchor.constraint(equalTo: view.centerXAnchor),
             mapPinShadow.centerYAnchor.constraint(equalTo: view.centerYAnchor),
@@ -109,6 +169,7 @@ class MapViewController: UIViewController {
             let coords = mapView.centerCoordinate
             resolve(["latitude": coords.latitude, "longitude": coords.longitude, "canceled": true])
         }
+        resolver = nil
         self.dismiss(animated: true)
     }
     @objc func finlizePicker() {
@@ -116,6 +177,7 @@ class MapViewController: UIViewController {
             let coords = mapView.centerCoordinate
             resolve(["latitude": coords.latitude, "longitude": coords.longitude, "canceled": false])
         }
+        resolver = nil
         self.dismiss(animated: true)
     }
     

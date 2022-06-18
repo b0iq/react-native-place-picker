@@ -6,7 +6,9 @@ import android.content.Intent.getIntent
 import com.facebook.react.bridge.*
 
 
-const val EXTRA_MESSAGE = "com.reactnativeplacepicker.MESSAGE"
+const val MAP_TITLE = "com.reactnativeplacepicker.MAP_TITLE"
+const val MAP_LATITUDE = "com.reactnativeplacepicker.MAP_LATITUDE"
+const val MAP_LONGITUDE = "com.reactnativeplacepicker.MAP_LONGITUDE"
 
 class PlacePickerModule(reactContext: ReactApplicationContext) :
   ReactContextBaseJavaModule(reactContext) {
@@ -21,22 +23,35 @@ class PlacePickerModule(reactContext: ReactApplicationContext) :
         resultCode: Int,
         intent: Intent?
       ) {
+
         if (requestCode == PLACE_PICKER_REQUEST) {
           pickerPromise?.let { promise ->
-            val data = intent?.getSerializableExtra("returnMap") as HashMap<String, Any>
+            val data = intent?.getSerializableExtra("returnMap") as? HashMap<String, Any>
             when (resultCode) {
               Activity.RESULT_CANCELED -> {
-                data["canceled"] = true
+                data?.set("canceled", true)
               }
               Activity.RESULT_OK -> {
-                data["canceled"] = false
+                data?.set("canceled", false)
               }
             }
             // because I hate Android programming...
             val toJSmap = Arguments.createMap().apply {
-              putDouble("latitude", data["latitude"] as Double)
-              putDouble("longitude", data["longitude"] as Double)
-              putBoolean("canceled", data["canceled"] as Boolean)
+              if (data?.get("latitude") != null) {
+                putDouble("latitude", data["latitude"] as Double)
+              } else {
+                putDouble("latitude", 0.0)
+              }
+              if (data?.get("longitude") != null) {
+                putDouble("longitude", data["longitude"] as Double)
+              } else {
+                putDouble("longitude", 0.0)
+              }
+              if (data?.get("canceled") != null) {
+                putBoolean("canceled", data["canceled"] as Boolean)
+              } else {
+                putBoolean("canceled", true)
+              }
             }
             promise.resolve(toJSmap)
             pickerPromise = null
@@ -52,11 +67,8 @@ class PlacePickerModule(reactContext: ReactApplicationContext) :
   override fun getName(): String {
     return "PlacePicker"
   }
-
-  // Example method
-  // See https://reactnative.dev/docs/native-modules-android
   @ReactMethod
-  fun pickPlaceWithOptions(options: ReadableMap, promise: Promise) {
+  fun pickPlace(promise: Promise) {
     val activity = currentActivity
 
     if (activity == null) {
@@ -69,8 +81,45 @@ class PlacePickerModule(reactContext: ReactApplicationContext) :
     try {
       val pickerIntent = Intent(reactApplicationContext, MapViewController::class.java).apply {
         putExtra(
-          EXTRA_MESSAGE, "Hi"
+          MAP_TITLE, "Pick a Place"
         )
+      }
+      activity.startActivityForResult(pickerIntent, PLACE_PICKER_REQUEST)
+    } catch (t: Throwable) {
+      pickerPromise?.reject(E_FAILED_TO_SHOW_PICKER, t)
+      pickerPromise = null
+    }
+
+  }
+
+  @ReactMethod
+  fun pickPlaceWithOptions(options: ReadableMap, promise: Promise) {
+    val coords = options.getMap("initialCoordinates")?: run {
+      promise.reject("PARSER_ERROR", "Unable to parse initialCoordinates")
+      return
+    }
+    val title = options.getString("title")?: run {
+      promise.reject("PARSER_ERROR", "Unable to parse title")
+      return
+    }
+    val latitude = coords.getDouble("latitude")
+    val longitude = coords.getDouble("longitude")
+    val activity = currentActivity
+
+    if (activity == null) {
+      promise.reject(E_ACTIVITY_DOES_NOT_EXIST, "Activity doesn't exist")
+      return
+    }
+
+    pickerPromise = promise
+
+    try {
+      val pickerIntent = Intent(reactApplicationContext, MapViewController::class.java).apply {
+        putExtra(
+          MAP_TITLE, title
+        )
+        putExtra(MAP_LATITUDE, latitude)
+        putExtra(MAP_LONGITUDE, longitude)
       }
       activity.startActivityForResult(pickerIntent, PLACE_PICKER_REQUEST)
     } catch (t: Throwable) {
