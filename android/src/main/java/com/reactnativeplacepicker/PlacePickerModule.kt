@@ -1,9 +1,6 @@
 package com.reactnativeplacepicker
 
-import com.facebook.react.bridge.ReactApplicationContext
-import com.facebook.react.bridge.ReactContextBaseJavaModule
-import com.facebook.react.bridge.ReactMethod
-import com.facebook.react.bridge.Promise
+import com.facebook.react.bridge.*
 
 class PlacePickerModule(reactContext: ReactApplicationContext) : ReactContextBaseJavaModule(reactContext) {
 
@@ -14,11 +11,11 @@ class PlacePickerModule(reactContext: ReactApplicationContext) : ReactContextBas
     // Example method
     // See https://reactnative.dev/docs/native-modules-android
     @ReactMethod
-    fun multiply(a: Int, b: Int, promise: Promise) {
-    
-      promise.resolve(a * b)
-    
+    fun pickPlaceWithOptions(options: ReadableMap, promise: Promise) {
+
+      promise.resolve("a * b")
+
     }
 
-    
+
 }
