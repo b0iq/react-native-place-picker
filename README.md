@@ -13,11 +13,24 @@ yarn add react-native-place-picker
 ## Usage
 
 ```js
-import { multiply } from "react-native-place-picker";
+import { pickPlace } from 'react-native-place-picker';
 
-// ...
+const OPTIONS = {
+    title: "Choose Place",
+    initialCoordinates: {
+        latitude: 25.2048,
+        longitude: 55.2708
+    }
+};
 
-const result = await multiply(3, 7);
+pickPlace(OPTIONS)
+    .then(console.log)
+    .catch(console.log)
+
+// or
+
+pickPlace().then(console.log).catch(console.log)
+
 ```
 
 ## Contributing

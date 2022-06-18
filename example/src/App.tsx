@@ -9,9 +9,7 @@ export default function App() {
     pickPlace({title: "Choose Place", initialCoordinates: {
       latitude: 25.2048,
       longitude: 55.2708
-    }}).then((results) => {
-      console.log(results);
-    }).catch(console.log)
+    }}).then(console.log).catch(console.log)
   }
 
   const pressHandler = () => {
