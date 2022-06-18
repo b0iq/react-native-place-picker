@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:app="http://schemas.android.com/apk/res-auto"
+  xmlns:android="http://schemas.android.com/apk/res/android"
+  xmlns:tools="http://schemas.android.com/tools"
+  tools:context=".MapViewController"
+  >
+  <item
+    android:id="@+id/action_close"
+    android:icon="@drawable/ic_baseline_close_24"
+    android:menuCategory="alternative"
+    android:title="Cancel"
+    app:showAsAction="always" />
+  <item
+    android:id="@+id/action_done"
+    android:icon="@drawable/ic_baseline_check_24"
+    android:menuCategory="container"
+    android:title="Done"
+    app:showAsAction="always" />
+</menu>
