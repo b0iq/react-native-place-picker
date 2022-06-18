@@ -9,5 +9,10 @@ RCT_EXTERN_METHOD(pickPlaceWithOptions:(NSDictionary) options
 RCT_EXTERN_METHOD(pickPlace:
                   (RCTPromiseResolveBlock *)resolve
                   withRejector:(RCTPromiseRejectBlock *)reject)
+                  
++ (BOOL)requiresMainQueueSetup
+{
+    return YES;
+}
 
 @end
