@@ -130,8 +130,14 @@ class MapViewController: UIViewController {
             resolver!(["latitude": coords.latitude, "longitude": coords.longitude, "canceled": true])
         }
     }
+
     override func viewDidLoad() {
         super.viewDidLoad()
+        if let t = titleText {
+            self.title = t
+        } else {
+            self.title = "Choose place"
+        }
         
         setupNavigationBar()
         
