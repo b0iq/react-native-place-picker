@@ -1,4 +1,4 @@
-package com.reactnativeplacepicker
+package com.placepicker
 
 import android.animation.ObjectAnimator
 import android.app.Activity

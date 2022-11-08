@@ -1,14 +1,12 @@
-package com.reactnativeplacepicker
+package com.placepicker
+import com.facebook.react.bridge.ReactApplicationContext
+import com.facebook.react.bridge.ReactContextBaseJavaModule
+import com.facebook.react.bridge.ReactMethod
+import com.facebook.react.bridge.Promise
 
-import android.app.Activity
-import android.content.Intent
-import android.content.Intent.getIntent
-import com.facebook.react.bridge.*
-
-
-const val MAP_TITLE = "com.reactnativeplacepicker.MAP_TITLE"
-const val MAP_LATITUDE = "com.reactnativeplacepicker.MAP_LATITUDE"
-const val MAP_LONGITUDE = "com.reactnativeplacepicker.MAP_LONGITUDE"
+const val MAP_TITLE = "com.placepicker.MAP_TITLE"
+const val MAP_LATITUDE = "com.placepicker.MAP_LATITUDE"
+const val MAP_LONGITUDE = "com.placepicker.MAP_LONGITUDE"
 
 class PlacePickerModule(reactContext: ReactApplicationContext) :
   ReactContextBaseJavaModule(reactContext) {
@@ -65,7 +63,7 @@ class PlacePickerModule(reactContext: ReactApplicationContext) :
   }
 
   override fun getName(): String {
-    return "PlacePicker"
+    return NAME
   }
   @ReactMethod
   fun pickPlace(promise: Promise) {
@@ -134,6 +132,7 @@ class PlacePickerModule(reactContext: ReactApplicationContext) :
     const val E_PICKER_CANCELLED = "E_PICKER_CANCELLED"
     const val E_FAILED_TO_SHOW_PICKER = "E_FAILED_TO_SHOW_PICKER"
     const val E_NO_IMAGE_DATA_FOUND = "E_NO_IMAGE_DATA_FOUND"
+    const val NAME = "PlacePicker"
   }
 
 
