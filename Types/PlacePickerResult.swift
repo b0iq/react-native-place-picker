@@ -6,3 +6,10 @@
 //
 
 import Foundation
+
+struct PlacePickerResult: Codable {
+    let coordinate: PlacePickerCoordinate
+    let address: PlacePickerAddress?
+    let didCancel: Bool
+    let userCurrentLocation: Bool
+}

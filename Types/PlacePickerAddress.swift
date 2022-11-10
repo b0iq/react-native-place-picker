@@ -6,3 +6,11 @@
 //
 
 import Foundation
+
+struct PlacePickerAddress: Codable {
+    let name: String?
+    let country: String?
+    let locality: String?
+    let shortAddress: String?
+    let longAddress: String?
+}

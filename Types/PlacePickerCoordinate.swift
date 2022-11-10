@@ -6,3 +6,7 @@
 //
 
 import Foundation
+
+struct PlacePickerCoordinate: Codable {
+    let latitude, longitude: Double
+}

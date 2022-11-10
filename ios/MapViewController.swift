@@ -12,33 +12,38 @@ import UIKit
 import MapKit
 class MapViewController: UIViewController {
     
-    var titleText: String? = "Pick a Place"
-    var resolver: RCTPromiseResolveBlock?
-    var coordinates: CLLocationCoordinate2D?
+    private let resolver: RCTPromiseResolveBlock
+    private let options: PlacePickerOptions
     
-    init(titleText: String?, coordinates: CLLocationCoordinate2D?, resolver: @escaping RCTPromiseResolveBlock) {
-        self.titleText = titleText
+    private var firstMapLoad: Bool = true
+    private var lastLocation: CLPlacemark?
+    private var searchInputDebounceTimer:Timer?
+    private var mapMoveDebounceTimer:Timer?
+    
+    private let geocoder = CLGeocoder()
+    private let locationManager = CLLocationManager()
+    
+    init(_ resolver: @escaping RCTPromiseResolveBlock, _ options: PlacePickerOptions) {
         self.resolver = resolver
-        self.coordinates = coordinates
+        self.options = options
         super.init(nibName: nil, bundle: nil)
     }
     
-    public required init?(coder aDecoder: NSCoder) {
-        super.init(coder: aDecoder)
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
     }
+
+    // MARK: - UI Views
     
-    let mapView: MKMapView = {
-        let map = MKMapView()
-        map.showsUserLocation   = true
-        map.showsBuildings      = true
-        map.showsTraffic        = true
-        map.showsCompass        = true
-        map.showsScale          = true
-        map.translatesAutoresizingMaskIntoConstraints = false
-        return map
+    private lazy var mapPinShadow: UIView = {
+        let shadowView = UIView()
+        shadowView.backgroundColor = UIColor(options.color).withAlphaComponent(0.5)
+        shadowView.translatesAutoresizingMaskIntoConstraints = false
+        shadowView.layer.cornerRadius = 2.5
+        shadowView.reactZIndex = 1000
+        return shadowView
     }()
-    
-    let mapPin: UIView = {
+    private lazy var pinImage: UIView = {
         let pinImage: UIImageView
         if #available(iOS 13.0, *) {
             pinImage = UIImageView(image: UIImage(systemName: "mappin"))
@@ -46,12 +51,25 @@ class MapViewController: UIViewController {
             pinImage = UIImageView(image: UIImage(named: "mappin"))
         }
         pinImage.contentMode = .center
+        pinImage.tintColor = UIColor(options.contrast)
         pinImage.frame = CGRect(x: 0, y: 0, width: 40, height: 40)
-        pinImage.tintColor = .white
+        return pinImage
+    }()
+    private lazy var pinLoading: UIActivityIndicatorView = {
+        let loader = UIActivityIndicatorView(frame: CGRect(x: 0, y: 0, width: 40, height: 40))
+        loader.color = UIColor(options.contrast)
+        loader.hidesWhenStopped = true
+        return loader
+    }()
+    private lazy var mapPinContentView: UIView = {
         let pinContainer = UIView(frame: CGRect(x: 5, y: 4, width: 40, height: 40))
         pinContainer.layer.cornerRadius = 20
-        pinContainer.backgroundColor = .black
+        pinContainer.backgroundColor = UIColor(options.color)
         pinContainer.addSubview(pinImage)
+        pinContainer.addSubview(pinLoading)
+        return pinContainer
+    }()
+    private lazy var mapPin: UIView = {
         let heightWidth = 10
         let path = CGMutablePath()
         path.move(to: CGPoint(x:20, y: 43))
@@ -60,36 +78,59 @@ class MapViewController: UIViewController {
         path.addLine(to: CGPoint(x:20, y:43))
         let shape = CAShapeLayer()
         shape.path = path
-        shape.fillColor = UIColor.black.cgColor
-        
-        let baseView = UIView()
-        
-        baseView.layer.insertSublayer(shape, at: 0)
-        baseView.addSubview(pinContainer)
-        
-        baseView.translatesAutoresizingMaskIntoConstraints = false
-        return baseView
+        shape.fillColor = UIColor(options.color).cgColor
+        let pinView = UIView()
+        pinView.layer.insertSublayer(shape, at: 0)
+        pinView.addSubview(mapPinContentView)
+        pinView.translatesAutoresizingMaskIntoConstraints = false
+        return pinView
     }()
     
-    let mapPinShadow: UIView = {
-        let view = UIView()
-        view.backgroundColor = UIColor(white: 0, alpha: 0.5)
-        view.translatesAutoresizingMaskIntoConstraints = false
-        view.layer.cornerRadius = 2.5
-        return view
-    }()
     
-    override func viewWillAppear(_ animated: Bool) {
-        if #available(iOS 13, *) {
-            let appearance = UINavigationBarAppearance()
-            appearance.configureWithOpaqueBackground()
-            navigationController?.navigationBar.standardAppearance = appearance;
-            navigationController?.navigationBar.scrollEdgeAppearance = appearance
-            navigationController?.navigationBar.isTranslucent = true
-        }
+    private lazy var mapView: MKMapView = {
+        let map = MKMapView()
+        map.showsUserLocation   = true
+        map.showsBuildings      = true
+        map.showsTraffic        = false
+        map.showsCompass        = true
+        map.showsScale          = true
+        map.region = MKCoordinateRegion(center: CLLocationCoordinate2D(latitude: options.initialCoordinates.latitude, longitude: options.initialCoordinates.longitude), latitudinalMeters: 1000, longitudinalMeters: 1000)
+        
+        map.translatesAutoresizingMaskIntoConstraints = false
+        
+        return map
+    }()
+    private func setupViews() {
+        // MARK: - 1 Setup map view
+        self.view.addSubview(mapView)
+        NSLayoutConstraint.activate([
+            mapView.widthAnchor.constraint(equalTo: self.view.widthAnchor),
+            mapView.heightAnchor.constraint(equalTo: self.view.heightAnchor),
+//            mapView.leadingAnchor.constraint(equalTo: self.view.leadingAnchor),
+//            mapView.trailingAnchor.constraint(equalTo: self.view.trailingAnchor),
+        ])
+        self.view.addSubview(mapPinShadow)
+        NSLayoutConstraint.activate([
+            mapPinShadow.centerXAnchor.constraint(equalTo: self.view.centerXAnchor),
+            mapPinShadow.centerYAnchor.constraint(equalTo: self.view.safeAreaLayoutGuide.centerYAnchor),
+            mapPinShadow.widthAnchor.constraint(equalToConstant: 5),
+            mapPinShadow.heightAnchor.constraint(equalToConstant: 5)
+        ])
+        
+        mapPin.setAnchorPoint(CGPoint(x: 0.5, y: 1))
+        self.view.addSubview(mapPin)
+        NSLayoutConstraint.activate([
+            mapPin.centerXAnchor.constraint(equalTo: self.mapView.centerXAnchor),
+            mapPin.bottomAnchor.constraint(equalTo: self.view.safeAreaLayoutGuide.centerYAnchor, constant: 25),
+            mapPin.widthAnchor.constraint(equalToConstant: 50),
+            mapPin.heightAnchor.constraint(equalToConstant: 50)
+        ])
+        
+        // MARK: - 2 Setup naivgation bar
+        setupNavigationBar()
     }
     private func setupNavigationBar() {
-
+        // MARK: - 1 Make cancel button
         let customCancelButton = UIButton()
         customCancelButton.tintColor = .gray
         if #available(iOS 13.0, *) {
@@ -98,9 +139,9 @@ class MapViewController: UIViewController {
         } else {
             customCancelButton.setTitle("Cancel", for: .normal)
         }
-        
         customCancelButton.addTarget(self, action: #selector(closePicker), for: .touchUpInside)
         
+        // MARK: - 2 Make done button
         let customDoneButton = UIButton()
         customDoneButton.tintColor = .gray
         if #available(iOS 13.0, *) {
@@ -109,95 +150,209 @@ class MapViewController: UIViewController {
         } else {
             customDoneButton.setTitle("Done", for: .normal)
         }
+        customDoneButton.addTarget(self, action: #selector(finalizePicker), for: .touchUpInside)
         
-        customDoneButton.addTarget(self, action: #selector(finlizePicker), for: .touchUpInside)
+        // MARK: - 3 Make user location button
+        let customUserLocationButton = UIButton()
+        customUserLocationButton.tintColor = .gray
+        if #available(iOS 13.0, *) {
+            let checkImage = UIImage(systemName: "location")
+            customUserLocationButton.setImage(checkImage, for: .normal)
+        } else {
+            customUserLocationButton.setTitle("location", for: .normal)
+        }
+        customUserLocationButton.addTarget(self, action: #selector(pickUserLocation), for: .touchUpInside)
         
         if #available(iOS 15.0, *) {
             customDoneButton.configuration = .gray()
             customCancelButton.configuration = .gray()
+            customUserLocationButton.configuration = .gray()
         }
         
         let customCancelButtonItem = UIBarButtonItem(customView: customCancelButton)
         let customDoneButtonItem = UIBarButtonItem(customView: customDoneButton)
+        let customUserLocationButtonItem = UIBarButtonItem(customView: customUserLocationButton)
         
+        if (options.enableSearch) {
+            let searchController = UISearchController(searchResultsController: nil)
+            navigationItem.searchController = searchController
+            searchController.searchBar.placeholder = options.searchPlaceholder
+            searchController.searchBar.enablesReturnKeyAutomatically = true
+            searchController.searchBar.delegate = self
+        }
+        
+        if (options.enableLargeTitle) {
+            self.navigationItem.largeTitleDisplayMode = .automatic
+            self.navigationController?.navigationBar.prefersLargeTitles = true
+        }
+        var rightItems = [customDoneButtonItem]
+        if (options.enableUserlocation) {
+            rightItems.append(customUserLocationButtonItem)
+        }
         self.navigationItem.leftBarButtonItem = customCancelButtonItem
-        self.navigationItem.rightBarButtonItem = customDoneButtonItem
-        
+        self.navigationItem.rightBarButtonItems = rightItems
     }
-    override func viewDidDisappear(_ animated: Bool) {
-        if resolver != nil {
-            let coords = mapView.centerCoordinate
-            resolver!(["latitude": coords.latitude, "longitude": coords.longitude, "canceled": true])
+    
+    override func viewWillAppear(_ animated: Bool) {
+        if #available(iOS 13, *) {
+            let appearance = UINavigationBarAppearance()
+            appearance.configureWithDefaultBackground()
+            navigationController?.navigationBar.standardAppearance = appearance
+            navigationController?.navigationBar.scrollEdgeAppearance = appearance
+            navigationController?.navigationBar.isTranslucent = true
         }
     }
-
+    
     override func viewDidLoad() {
         super.viewDidLoad()
-        if let t = titleText {
-            self.title = t
-        } else {
-            self.title = "Choose place"
+        self.title = options.title
+        if (options.enableUserlocation) {
+            locationManager.delegate = self
+            locationManager.requestWhenInUseAuthorization()
         }
+        setupViews()
         
-        setupNavigationBar()
-        
-        
+    }
+    
+    override func viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
+        mapView.centerCoordinate = CLLocationCoordinate2D(latitude: options.initialCoordinates.latitude, longitude: options.initialCoordinates.longitude)
         mapView.delegate = self
-        if let coords = coordinates {
-            mapView.region = MKCoordinateRegion(center: coords, latitudinalMeters: 1000, longitudinalMeters: 1000)
-        }
-        
-        
-        view.addSubview(mapView)
-        view.addSubview(mapPinShadow)
-        view.addSubview(mapPin)
-        
-        NSLayoutConstraint.activate([
-            mapPinShadow.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            mapPinShadow.centerYAnchor.constraint(equalTo: view.centerYAnchor),
-            mapPinShadow.widthAnchor.constraint(equalToConstant: 5),
-            mapPinShadow.heightAnchor.constraint(equalToConstant: 5),
-            
-            mapPin.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            mapPin.bottomAnchor.constraint(equalTo: mapPinShadow.topAnchor),
-            mapPin.widthAnchor.constraint(equalToConstant: 50),
-            mapPin.heightAnchor.constraint(equalToConstant: 50),
-            
-            mapView.topAnchor.constraint(equalTo: view.topAnchor),
-            mapView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
-            mapView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            mapView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-        ])
     }
     
-    @objc func closePicker() {
-        if let resolve = resolver {
-            let coords = mapView.centerCoordinate
-            resolve(["latitude": coords.latitude, "longitude": coords.longitude, "canceled": true])
+    override func viewSafeAreaInsetsDidChange() {
+        super.viewSafeAreaInsetsDidChange()
+        if (!firstMapLoad) {
+            UIView.animate(withDuration: 0.3) { self.view.layoutIfNeeded() }
+            mapView.setCenter(mapView.centerCoordinate, animated: true)
+        } else {
+            firstMapLoad = false
         }
-        resolver = nil
-        self.dismiss(animated: true)
     }
-    @objc func finlizePicker() {
-        if let resolve = resolver {
-            let coords = mapView.centerCoordinate
-            resolve(["latitude": coords.latitude, "longitude": coords.longitude, "canceled": false])
-        }
-        resolver = nil
+    
+    @objc private func pickUserLocation() {
+        locationManager.requestLocation()
+    }
+    @objc private func closePicker() {
+        let coords = mapView.centerCoordinate
+        resolver(["latitude": coords.latitude, "longitude": coords.longitude, "canceled": true])
         self.dismiss(animated: true)
     }
     
+    @objc private func finalizePicker() {
+        mapView.setCenter(CLLocationCoordinate2D(latitude: options.initialCoordinates.latitude, longitude: options.initialCoordinates.longitude), animated: true)
+//        let coords = mapView.centerCoordinate
+//        resolver(["latitude": coords.latitude, "longitude": coords.longitude, "canceled": false])
+//        self.dismiss(animated: true)
+    }
+    
+    private func setLoading(_ state: Bool) {
+        pinImage.isHidden = state
+        if (state) {
+            pinLoading.startAnimating()
+        } else {
+            pinLoading.stopAnimating()
+        }
+    }
+    
+    private func mapWillMove() {
+        startPinAnimation()
+    }
+    private func mapDidMove() {
+        setLoading(true)
+        geocoder.reverseGeocodeLocation(CLLocation(latitude: mapView.centerCoordinate.latitude, longitude: mapView.centerCoordinate.longitude), preferredLocale: Locale(identifier: options.locale)) { location, error in
+            if let _ = error {
+                self.setLoading(false)
+                self.endPinAnimation()
+                return
+            }
+            
+            if let name = location?.first?.name {
+                self.navigationItem.searchController?.searchBar.placeholder = name
+            }
+            
+            self.setLoading(false)
+            self.endPinAnimation()
+            
+        }
+    }
+    
+    private func startPinAnimation() {
+        UIView.animate(withDuration: 0.3, delay: 0, options: [.curveEaseInOut], animations: {
+            self.mapPin.transform =  CGAffineTransform.identity.scaledBy(x: 1.3, y: 1.3).translatedBy(x: 0, y: -10)
+        })
+    }
+    private func endPinAnimation(_ comp: ((Bool) -> Void)? = nil) {
+        let rotationAmount: CGFloat = 0.5
+        UIView.animateKeyframes(withDuration: 1.8,
+                                delay: 0,
+                                animations: {
+            UIView.addKeyframe(withRelativeStartTime: 0, relativeDuration: 1/6) {
+                self.mapPin.transform =  CGAffineTransform.identity
+            }
+            UIView.addKeyframe(withRelativeStartTime: 1 / 6, relativeDuration: 1/6) {
+                self.mapPin.transform =  CGAffineTransform.identity.rotated(by: -rotationAmount / 2)
+            }
+            UIView.addKeyframe(withRelativeStartTime: 2 / 6, relativeDuration: 1/6) {
+                self.mapPin.transform =  CGAffineTransform.identity.rotated(by: rotationAmount / 3)
+            }
+            UIView.addKeyframe(withRelativeStartTime: 3 / 6, relativeDuration: 1/6) {
+                self.mapPin.transform =  CGAffineTransform.identity.rotated(by: -rotationAmount / 4)
+            }
+            UIView.addKeyframe(withRelativeStartTime: 4 / 6, relativeDuration: 1/6) {
+                self.mapPin.transform =  CGAffineTransform.identity.rotated(by: rotationAmount / 5)
+            }
+            UIView.addKeyframe(withRelativeStartTime: 5 / 6, relativeDuration: 1/6) {
+                self.mapPin.transform =  CGAffineTransform.identity
+            }
+        }, completion: comp)
+    }
 }
 
 extension MapViewController: MKMapViewDelegate {
     func mapView(_ mapView: MKMapView, regionDidChangeAnimated animated: Bool) {
-        UIView.animate(withDuration: 0.3, delay: 0, options: [.curveEaseInOut], animations: {
-            self.mapPin.transform = CGAffineTransform(translationX: 0, y: 0)
-        })
+        mapDidMove()
+        
     }
     func mapView(_ mapView: MKMapView, regionWillChangeAnimated animated: Bool) {
-        UIView.animate(withDuration: 0.3, delay: 0, options: [.curveEaseInOut], animations: {
-            self.mapPin.transform =  CGAffineTransform(translationX: 0, y: -15)
-        })
+        mapWillMove()
+    }
+}
+extension MapViewController: UISearchBarDelegate {
+    func searchBarShouldEndEditing(_ searchBar: UISearchBar) -> Bool {
+        true
+    }
+    func searchBarSearchButtonClicked(_ searchBar: UISearchBar) {
+        searchInputDebounceTimer?.fire()
+        searchBar.endEditing(true)
+        searchBar.resignFirstResponder()
+        navigationController?.navigationItem.searchController?.isActive = false
+        navigationController?.navigationItem.searchController?.resignFirstResponder()
+        
+    }
+    func searchBar(_ searchBar: UISearchBar, textDidChange searchText: String) {
+        searchInputDebounceTimer?.invalidate()
+        searchInputDebounceTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: false) { _ in
+            self.geocoder.geocodeAddressString(searchText) { places, error in
+                if let error = error {
+                    print(error.localizedDescription)
+                    return
+                } else {
+                    if let location = places?.first?.location?.coordinate {
+                        self.mapView.setCenter(location, animated: true)
+                    }
+                }
+            }
+        }
+    }
+}
+extension MapViewController: CLLocationManagerDelegate {
+    func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
+        if let coordinate = locations.first?.coordinate {
+            mapView.setCenter(coordinate, animated: true)
+        }
+    }
+    func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
+        print(error)
     }
 }

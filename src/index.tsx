@@ -18,21 +18,27 @@ const PlacePicker = NativeModules.PlacePicker
     );
 
 export interface PickerCoordinates {
-  latitude: number,
-  longitude: number,
+  latitude: number;
+  longitude: number;
 }
 export interface PickerOptions {
-  initialCoordinates: PickerCoordinates
-  title: String;
+  initialCoordinates?: PickerCoordinates;
+  title?: String;
+  searchPlaceholder?: String;
+  accentColor?: String;
+  locale?: String;
 }
 export interface PickerResults extends PickerCoordinates {
   canceled: boolean;
+  address?: any;
 }
 
-export function pickPlace(options: PickerOptions | undefined = undefined): Promise<PickerResults> {
+export function pickPlace(
+  options: PickerOptions | undefined = undefined
+): Promise<PickerResults> {
   if (options !== undefined) {
-    return PlacePicker.pickPlaceWithOptions(options)
+    return PlacePicker.pickPlaceWithOptions(options);
   } else {
-    return PlacePicker.pickPlace()
+    return PlacePicker.pickPlace();
   }
 }

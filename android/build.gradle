@@ -131,10 +131,11 @@ repositories {
 def kotlin_version = getExtOrDefault('kotlinVersion')
 
 dependencies {
-  implementation "com.google.android.gms:play-services-maps"
+  implementation "com.google.android.gms:play-services-maps:18.1.0"
     //noinspection GradleDynamicVersion
   implementation "com.facebook.react:react-native:+"
   implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
+  implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
 // From node_modules
 }
 

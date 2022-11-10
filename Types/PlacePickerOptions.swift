@@ -8,15 +8,14 @@
 import Foundation
 
 struct PlacePickerOptions: Codable {
-    struct Coordinate: Codable, Hashable {
-        let latitude, longitude: Double
-    }
     var title: String = "Choose Place"
     var searchPlaceholder: String = "Search..."
-    var color: String = "#FFF000"
+    var color: String = "#FF0000"
     var contrast: String = "#FFFFFF"
     var locale: String = "en-US"
-    var initialCoordinates: Coordinate = Coordinate(latitude: 0.00, longitude: 0.00)
-    var returnAddress = true
-    var searchable = true
+    var initialCoordinates: PlacePickerCoordinate = PlacePickerCoordinate(latitude: 25.2048, longitude: 55.2708)
+    var enableGeocoding = true
+    var enableSearch = true
+    var enableUserlocation = true
+    var enableLargeTitle = true
 }

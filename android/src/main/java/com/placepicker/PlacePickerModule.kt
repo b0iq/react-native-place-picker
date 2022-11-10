@@ -1,8 +1,7 @@
 package com.placepicker
-import com.facebook.react.bridge.ReactApplicationContext
-import com.facebook.react.bridge.ReactContextBaseJavaModule
-import com.facebook.react.bridge.ReactMethod
-import com.facebook.react.bridge.Promise
+import android.app.Activity
+import android.content.Intent
+import com.facebook.react.bridge.*
 
 const val MAP_TITLE = "com.placepicker.MAP_TITLE"
 const val MAP_LATITUDE = "com.placepicker.MAP_LATITUDE"
@@ -129,9 +128,7 @@ class PlacePickerModule(reactContext: ReactApplicationContext) :
   companion object {
     const val PLACE_PICKER_REQUEST = 1
     const val E_ACTIVITY_DOES_NOT_EXIST = "E_ACTIVITY_DOES_NOT_EXIST"
-    const val E_PICKER_CANCELLED = "E_PICKER_CANCELLED"
     const val E_FAILED_TO_SHOW_PICKER = "E_FAILED_TO_SHOW_PICKER"
-    const val E_NO_IMAGE_DATA_FOUND = "E_NO_IMAGE_DATA_FOUND"
     const val NAME = "PlacePicker"
   }
 

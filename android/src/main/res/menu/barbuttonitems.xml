@@ -5,15 +5,21 @@
   tools:context=".MapViewController"
   >
   <item
+    android:id="@+id/search"
+    android:title="Search..."
+    android:icon="@drawable/ic_baseline_search_24"
+    app:actionViewClass="android.widget.SearchView"
+    app:showAsAction="collapseActionView" />
+  <item
     android:id="@+id/action_close"
     android:icon="@drawable/ic_baseline_close_24"
-    android:menuCategory="alternative"
     android:title="Cancel"
-    app:showAsAction="always" />
+    app:showAsAction="ifRoom"/>
   <item
     android:id="@+id/action_done"
     android:icon="@drawable/ic_baseline_check_24"
-    android:menuCategory="container"
+
     android:title="Done"
-    app:showAsAction="always" />
+    app:showAsAction="ifRoom"
+    />
 </menu>

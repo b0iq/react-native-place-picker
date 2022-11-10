@@ -3,12 +3,14 @@ package com.placepicker
 import android.animation.ObjectAnimator
 import android.app.Activity
 import android.content.Intent
-import androidx.appcompat.app.AppCompatActivity
+import android.location.Geocoder
 import android.os.Bundle
 import android.view.Menu
 import android.view.MenuInflater
 import android.view.MenuItem
 import android.view.View
+import android.widget.SearchView
+import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.WindowCompat
 import com.facebook.react.bridge.Arguments
 import com.google.android.gms.maps.CameraUpdateFactory
@@ -26,6 +28,7 @@ class MapViewController : AppCompatActivity(), OnMapReadyCallback,
   private lateinit var pinViewAnimation: ObjectAnimator
   private var latitude: Double = 0.0
   private var longitude: Double = 0.0
+  private lateinit var geocoder: Geocoder
 
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
@@ -42,6 +45,7 @@ class MapViewController : AppCompatActivity(), OnMapReadyCallback,
     latitude = intent.getDoubleExtra(MAP_LATITUDE, 0.0);
     longitude = intent.getDoubleExtra(MAP_LONGITUDE, 0.0);
     title = message
+    geocoder =  Geocoder(applicationContext, Locale.getDefault())
   }
 
   private fun gatherViews() {
@@ -64,6 +68,32 @@ class MapViewController : AppCompatActivity(), OnMapReadyCallback,
   override fun onCreateOptionsMenu(menu: Menu?): Boolean {
     val inflater: MenuInflater = menuInflater
     inflater.inflate(R.menu.barbuttonitems, menu)
+    val myActionMenuItem = menu!!.findItem(R.id.search)
+    val searchView = myActionMenuItem.actionView as SearchView
+    searchView.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
+      override fun onQueryTextSubmit(query: String): Boolean {
+        val location = geocoder.getFromLocationName(query, 1)
+        val map = Bundle()
+        val address = location.first()
+
+        println("city: ${address.locality}")
+        println("district: ${address.subLocality}")
+        println("streetNumber: ${address.subThoroughfare}")
+        println("street: ${address.thoroughfare}")
+        println("region: ${address.adminArea}")
+        println("subregion: ${address.subAdminArea}")
+        println("country: ${address.countryName}")
+        println("postalCode: ${address.postalCode}")
+        println("name: ${address.featureName}")
+        println("isoCountryCode: ${address.countryCode}")
+        return false
+      }
+
+      override fun onQueryTextChange(newText: String): Boolean {
+        println("******** newText:$newText")
+        return true
+      }
+    })
     return true
   }
 
@@ -89,6 +119,10 @@ class MapViewController : AppCompatActivity(), OnMapReadyCallback,
   }
 
   override fun onOptionsItemSelected(item: MenuItem): Boolean {
+    if (item.itemId == R.id.search) {
+
+      return false
+    }
     val returnIntent = Intent();
     val mapCoords = mMap.cameraPosition.target
     val returnMap = Arguments.createMap().apply {
