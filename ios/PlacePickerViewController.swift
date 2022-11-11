@@ -11,8 +11,8 @@ import MapKit
 class PlacePickerViewController: UIViewController {
     
     // MARK: - Variables
-    private let resolver: RCTPromiseResolveBlock
-    private let rejector: RCTPromiseRejectBlock
+    private var resolver: RCTPromiseResolveBlock?
+    private var rejector: RCTPromiseRejectBlock?
     private let options: PlacePickerOptions
     
     private var firstMapLoad: Bool = true
@@ -226,8 +226,9 @@ class PlacePickerViewController: UIViewController {
         }
     }
     override func viewDidDisappear(_ animated: Bool) {
-        rejector("dismissed", "Modal closed by user", NSError(domain: "pickerView", code: 11))
-        self.dismiss(animated: true)
+        if (rejector != nil) {
+            rejector!("dismissed", "Modal closed by user", NSError(domain: "pickerView", code: 11))
+        }
     }
     
     // MARK: - Navigation bar buttons methods
@@ -236,15 +237,26 @@ class PlacePickerViewController: UIViewController {
     }
     @objc private func closePicker() {
         if (options.rejectOnCancel) {
-            rejector("cancel", "User cancel the operation and `rejectOnCancel` is enabled", NSError(domain: "pickerView", code: 13))
-            self.dismiss(animated: true)
+            if (rejector != nil) {
+                rejector!("cancel", "User cancel the operation and `rejectOnCancel` is enabled", NSError(domain: "pickerView", code: 13))
+                rejector = nil
+                resolver = nil
+                DispatchQueue.main.async {
+                    self.dismiss(animated: true)
+                }
+            }
             return
         }
-        resolver(try? PlacePickerResult(
+        resolver?(try? PlacePickerResult(
             coordinate: PlacePickerCoordinate(latitude: mapView.centerCoordinate.latitude, longitude: mapView.centerCoordinate.longitude),
             address: PlacePickerAddress(with: self.lastLocation),
             didCancel: true).asDictionary())
-        self.dismiss(animated: true)
+        resolver = nil
+        rejector = nil
+        
+        DispatchQueue.main.async {
+            self.dismiss(animated: true)
+        }
     }
     @objc private func finalizePicker() {
         do {
@@ -252,10 +264,12 @@ class PlacePickerViewController: UIViewController {
                 coordinate: PlacePickerCoordinate(latitude: mapView.centerCoordinate.latitude, longitude: mapView.centerCoordinate.longitude),
                 address: PlacePickerAddress(with: self.lastLocation),
                 didCancel: false).asDictionary()
-            resolver(result)
+            resolver?(result)
         } catch {
             
         }
+        rejector = nil
+        resolver = nil
         self.dismiss(animated: true)
     }
     
