@@ -43,7 +43,6 @@ extension NSDictionary {
     }
     func asClass<T: Codable>() throws -> T {
         let dict = try self.swiftDictionary.toJson()
-        print(dict)
         return try JSONDecoder().decode(T.self, from: dict.data(using: .utf8)!)
     }
 }

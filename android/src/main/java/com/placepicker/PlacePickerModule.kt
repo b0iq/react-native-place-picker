@@ -1,13 +1,12 @@
 package com.placepicker
 import android.app.Activity
+import android.app.ActivityOptions
 import android.content.Intent
-import android.widget.Toast
+import com.facebook.jni.HybridData
 import com.facebook.react.bridge.*
-
-const val MAP_TITLE = "com.placepicker.MAP_TITLE"
-const val MAP_LATITUDE = "com.placepicker.MAP_LATITUDE"
-const val MAP_LONGITUDE = "com.placepicker.MAP_LONGITUDE"
-
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.module.kotlin.convertValue
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 
 class PlacePickerModule(reactContext: ReactApplicationContext) :
   ReactContextBaseJavaModule(reactContext) {
@@ -22,37 +21,25 @@ class PlacePickerModule(reactContext: ReactApplicationContext) :
         resultCode: Int,
         intent: Intent?
       ) {
-
         if (requestCode == PLACE_PICKER_REQUEST) {
           pickerPromise?.let { promise ->
-            val data = intent?.getSerializableExtra("returnMap") as? HashMap<String, Any>
             when (resultCode) {
               Activity.RESULT_CANCELED -> {
-                data?.set("canceled", true)
+                PlacePickerState.result.didCancel = true
               }
               Activity.RESULT_OK -> {
-                data?.set("canceled", false)
+                PlacePickerState.result.didCancel = false
               }
             }
-            // because I hate Android programming...
-            val toJSmap = Arguments.createMap().apply {
-              if (data?.get("latitude") != null) {
-                putDouble("latitude", data["latitude"] as Double)
-              } else {
-                putDouble("latitude", 0.0)
-              }
-              if (data?.get("longitude") != null) {
-                putDouble("longitude", data["longitude"] as Double)
-              } else {
-                putDouble("longitude", 0.0)
-              }
-              if (data?.get("canceled") != null) {
-                putBoolean("canceled", data["canceled"] as Boolean)
-              } else {
-                putBoolean("canceled", true)
-              }
+
+            if (PlacePickerState.result.didCancel && PlacePickerState.options?.rejectOnCancel == true) {
+              promise.reject("cancel", "user did cancel the operation")
+            } else {
+              val mapper = ObjectMapper()
+              val map = mapper.convertValue(PlacePickerState.result, Map::class.java) as Map<String, Any>
+              val result = Arguments.makeNativeMap(map)
+              promise.resolve(result)
             }
-            promise.resolve(toJSmap)
             pickerPromise = null
           }
         }
@@ -67,8 +54,9 @@ class PlacePickerModule(reactContext: ReactApplicationContext) :
     return NAME
   }
 
-  @ReactMethod
-  fun pickPlace(promise: Promise) {
+  private fun start(promise: Promise, rawOptions: ReadableMap? = null) {
+    pickerPromise = promise
+    val optionsHashMap = if (rawOptions != null)  rawOptions.toHashMap() else hashMapOf<String, Any>()
     val activity = currentActivity
 
     if (activity == null) {
@@ -76,15 +64,13 @@ class PlacePickerModule(reactContext: ReactApplicationContext) :
       return
     }
 
-    pickerPromise = promise
-
     try {
-      val pickerIntent = Intent(reactApplicationContext, MapViewController::class.java).apply {
+      val pickerIntent = Intent(reactApplicationContext, PlacePickerActivity::class.java).apply {
         putExtra(
-          MAP_TITLE, "Pick a Place"
+          PICK_OPTIONS, optionsHashMap
         )
       }
-      activity.startActivityForResult(pickerIntent, PLACE_PICKER_REQUEST)
+      activity.startActivityForResult(pickerIntent, PLACE_PICKER_REQUEST, ActivityOptions.makeSceneTransitionAnimation(activity).toBundle())
     } catch (t: Throwable) {
       pickerPromise?.reject(E_FAILED_TO_SHOW_PICKER, t)
       pickerPromise = null
@@ -93,47 +79,13 @@ class PlacePickerModule(reactContext: ReactApplicationContext) :
   }
 
   @ReactMethod
-  fun pickPlaceWithOptions(options: ReadableMap, promise: Promise) {
-    val coords = options.getMap("initialCoordinates")?: run {
-      promise.reject("PARSER_ERROR", "Unable to parse initialCoordinates")
-      return
-    }
-    val title = options.getString("title")?: run {
-      promise.reject("PARSER_ERROR", "Unable to parse title")
-      return
-    }
-    val latitude = coords.getDouble("latitude")
-    val longitude = coords.getDouble("longitude")
-    val activity = currentActivity
-
-    if (activity == null) {
-      promise.reject(E_ACTIVITY_DOES_NOT_EXIST, "Activity doesn't exist")
-      return
-    }
-
-    pickerPromise = promise
-
-    try {
-      val pickerIntent = Intent(reactApplicationContext, MapViewController::class.java).apply {
-        putExtra(
-          MAP_TITLE, title
-        )
-        putExtra(MAP_LATITUDE, latitude)
-        putExtra(MAP_LONGITUDE, longitude)
-      }
-      activity.startActivityForResult(pickerIntent, PLACE_PICKER_REQUEST)
-    } catch (t: Throwable) {
-      pickerPromise?.reject(E_FAILED_TO_SHOW_PICKER, t)
-      pickerPromise = null
-    }
-  }
-
+  fun pickPlace(promise: Promise) { start(promise) }
+  @ReactMethod
+  fun pickPlaceWithOptions(options: ReadableMap, promise: Promise) { start(promise, options) }
   companion object {
     const val PLACE_PICKER_REQUEST = 1
     const val E_ACTIVITY_DOES_NOT_EXIST = "E_ACTIVITY_DOES_NOT_EXIST"
     const val E_FAILED_TO_SHOW_PICKER = "E_FAILED_TO_SHOW_PICKER"
     const val NAME = "PlacePicker"
   }
-
-
 }

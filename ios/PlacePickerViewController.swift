@@ -10,12 +10,12 @@ import UIKit
 import MapKit
 class PlacePickerViewController: UIViewController {
     
+    // MARK: - Variables
     private let resolver: RCTPromiseResolveBlock
     private let rejector: RCTPromiseRejectBlock
     private let options: PlacePickerOptions
     
     private var firstMapLoad: Bool = true
-    private var userCurrentLocation: Bool = false
     private var lastLocation: CLPlacemark?
     private var searchInputDebounceTimer:Timer?
     private var mapMoveDebounceTimer:Timer?
@@ -23,19 +23,18 @@ class PlacePickerViewController: UIViewController {
     private let geocoder = CLGeocoder()
     private let locationManager = CLLocationManager()
     
+    // MARK: - Inits
     init(_ resolver: @escaping RCTPromiseResolveBlock, _ rejector: @escaping RCTPromiseRejectBlock, _ options: PlacePickerOptions) {
         self.resolver = resolver
         self.rejector = rejector
         self.options = options
         super.init(nibName: nil, bundle: nil)
     }
-    
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
     
     // MARK: - UI Views
-    
     private lazy var mapPinShadow: UIView = {
         let shadowView = UIView()
         shadowView.backgroundColor = UIColor(options.color).withAlphaComponent(0.5)
@@ -86,8 +85,6 @@ class PlacePickerViewController: UIViewController {
         pinView.translatesAutoresizingMaskIntoConstraints = false
         return pinView
     }()
-    
-    
     private lazy var mapView: MKMapView = {
         let map = MKMapView()
         map.showsUserLocation   = true
@@ -99,6 +96,8 @@ class PlacePickerViewController: UIViewController {
         map.translatesAutoresizingMaskIntoConstraints = false
         return map
     }()
+    
+    // MARK: - UI setup methods
     private func setupViews() {
         // MARK: - 1 Setup map view
         self.view.addSubview(mapView)
@@ -192,6 +191,7 @@ class PlacePickerViewController: UIViewController {
         self.navigationItem.rightBarButtonItems = rightItems
     }
     
+    // MARK: - UIViewController Lifecycle
     override func viewWillAppear(_ animated: Bool) {
         if #available(iOS 13, *) {
             let appearance = UINavigationBarAppearance()
@@ -201,7 +201,6 @@ class PlacePickerViewController: UIViewController {
             navigationController?.navigationBar.isTranslucent = true
         }
     }
-    
     override func viewDidLoad() {
         super.viewDidLoad()
         self.title = options.title
@@ -212,13 +211,11 @@ class PlacePickerViewController: UIViewController {
         setupViews()
         
     }
-    
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
         mapView.centerCoordinate = CLLocationCoordinate2D(latitude: options.initialCoordinates.latitude, longitude: options.initialCoordinates.longitude)
         mapView.delegate = self
     }
-    
     override func viewSafeAreaInsetsDidChange() {
         super.viewSafeAreaInsetsDidChange()
         if (!firstMapLoad) {
@@ -228,7 +225,12 @@ class PlacePickerViewController: UIViewController {
             firstMapLoad = false
         }
     }
+    override func viewDidDisappear(_ animated: Bool) {
+        rejector("dismissed", "Modal closed by user", NSError(domain: "pickerView", code: 11))
+        self.dismiss(animated: true)
+    }
     
+    // MARK: - Navigation bar buttons methods
     @objc private func pickUserLocation() {
         locationManager.requestLocation()
     }
@@ -241,18 +243,15 @@ class PlacePickerViewController: UIViewController {
         resolver(try? PlacePickerResult(
             coordinate: PlacePickerCoordinate(latitude: mapView.centerCoordinate.latitude, longitude: mapView.centerCoordinate.longitude),
             address: PlacePickerAddress(with: self.lastLocation),
-            didCancel: true,
-            userCurrentLocation: userCurrentLocation).asDictionary())
+            didCancel: true).asDictionary())
         self.dismiss(animated: true)
     }
-    
     @objc private func finalizePicker() {
         do {
             let result = try PlacePickerResult(
                 coordinate: PlacePickerCoordinate(latitude: mapView.centerCoordinate.latitude, longitude: mapView.centerCoordinate.longitude),
                 address: PlacePickerAddress(with: self.lastLocation),
-                didCancel: false,
-                userCurrentLocation: userCurrentLocation).asDictionary()
+                didCancel: false).asDictionary()
             resolver(result)
         } catch {
             
@@ -260,6 +259,7 @@ class PlacePickerViewController: UIViewController {
         self.dismiss(animated: true)
     }
     
+    // MARK: - Private methods
     private func setLoading(_ state: Bool) {
         pinImage.isHidden = state
         if (state) {
@@ -268,7 +268,6 @@ class PlacePickerViewController: UIViewController {
             pinLoading.stopAnimating()
         }
     }
-    
     private func mapWillMove() {
         startPinAnimation()
     }
@@ -297,7 +296,6 @@ class PlacePickerViewController: UIViewController {
             self.endPinAnimation()
         }
     }
-    
     private func startPinAnimation() {
         UIView.animate(withDuration: 0.3, delay: 0, options: [.curveEaseInOut], animations: {
             self.mapPin.transform =  CGAffineTransform.identity.scaledBy(x: 1.3, y: 1.3).translatedBy(x: 0, y: -10)
@@ -337,9 +335,6 @@ extension PlacePickerViewController: MKMapViewDelegate {
     }
     func mapView(_ mapView: MKMapView, regionWillChangeAnimated animated: Bool) {
         mapWillMove()
-        if (userCurrentLocation && !animated) {
-            userCurrentLocation = false
-        }
     }
     
 }
@@ -374,7 +369,6 @@ extension PlacePickerViewController: UISearchBarDelegate {
 extension PlacePickerViewController: CLLocationManagerDelegate {
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
         if let coordinate = locations.first?.coordinate {
-            userCurrentLocation = true
             mapView.setCenter(coordinate, animated: true)
         }
     }

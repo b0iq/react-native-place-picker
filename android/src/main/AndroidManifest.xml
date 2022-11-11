@@ -2,7 +2,7 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <application>
-        <activity android:name=".MapViewController" android:exported="true" android:theme="@style/Theme.PlacePickerTheme" />
+        <activity android:name=".PlacePickerActivity" android:exported="true" android:theme="@style/Theme.PlacePickerTheme" />
     </application>
 
 </manifest>

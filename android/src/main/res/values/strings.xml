@@ -1,1 +1,6 @@
-<resources></resources>
+<resources>
+  <string name="cancel">Cancel</string>
+  <string name="done">Done</string>
+  <string name="searchplaceholder">Search...</string>
+  <string name="my_location">My Location</string>
+</resources>

@@ -1,6 +1,6 @@
 {
   "name": "react-native-place-picker",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "Pick any place with single click 🚀",
   "main": "lib/commonjs/index",
   "module": "lib/module/index",

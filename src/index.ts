@@ -127,11 +127,6 @@ export interface PlacePickerResults {
    * @description Did cancel the place picker window without selecting.
    */
   didCancel: boolean;
-  /**
-   * @description If the result is from user location button, this will be true.
-   * @if `enableUserLocation: true`
-   */
-  userCurrentLocation: boolean;
 }
 
 export function pickPlace(
