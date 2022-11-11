@@ -1,10 +1,12 @@
 package com.placepicker
 
 import android.animation.ObjectAnimator
+import android.animation.PropertyValuesHolder
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.Color
 import android.location.Address
 import android.location.Geocoder
 import android.os.Bundle
@@ -63,7 +65,11 @@ class PlacePickerActivity : AppCompatActivity(), OnMapReadyCallback,
   }
   private fun gatherViews() {
     pinView = findViewById(R.id.pinView)
-    pinViewAnimation = ObjectAnimator.ofFloat(pinView, "translationY", -50F).apply {
+    pinView.background.setTint(Color.parseColor(options.color))
+    val scaleXVal: PropertyValuesHolder = PropertyValuesHolder.ofFloat("scaleX", 1.5F)
+    val scaleYVal: PropertyValuesHolder = PropertyValuesHolder.ofFloat("scaleY", 1.5F)
+    val transVal: PropertyValuesHolder = PropertyValuesHolder.ofFloat("translationY", -50F)
+    pinViewAnimation = ObjectAnimator.ofPropertyValuesHolder(pinView, scaleXVal, scaleYVal, transVal).apply {
       duration = 300
     }
     val mapFragment = supportFragmentManager.findFragmentById(R.id.map) as SupportMapFragment
