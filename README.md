@@ -3,6 +3,9 @@
 ![HEADER](HEADER.png)
 
   <p align="center">
+      <a href="https://badge.fury.io/js/react-native-place-picker">
+      <img alt="NPM Version" src="https://badge.fury.io/js/react-native-place-picker.svg" />
+    </a>
     <a href="https://github.com/b0iq/react-native-place-picker/actions">
       <img alt="Tests Passing" src="https://github.com/anuraghazra/github-readme-stats/workflows/Test/badge.svg" />
     </a>
