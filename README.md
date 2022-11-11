@@ -1,16 +1,29 @@
 # react-native-place-picker
-Pick any place with single click 🚀
-
-⭐️⭐️⭐️⭐️⭐️⭐️⭐️⭐️⭐️⭐️⭐️⭐️
-
-Don't forget to ***STAR AND FORK*** this repo if you like it
-
-⭐️⭐️⭐️⭐️⭐️⭐️⭐️⭐️⭐️⭐️⭐️⭐️
 
 ![HEADER](HEADER.png)
 
+  <p align="center">
+    <a href="https://github.com/b0iq/react-native-place-picker/actions">
+      <img alt="Tests Passing" src="https://github.com/anuraghazra/github-readme-stats/workflows/Test/badge.svg" />
+    </a>
+    <a href="https://github.com/anuraghazra/github-readme-stats/graphs/contributors">
+      <img alt="GitHub Contributors" src="https://img.shields.io/github/contributors/b0iq/react-native-place-picker" />
+    </a>
+    <a href="https://codecov.io/gh/b0iq/react-native-place-picker">
+      <img src="https://codecov.io/gh/b0iq/react-native-place-picker/branch/master/graph/badge.svg" />
+    </a>
+    <a href="https://github.com/b0iq/react-native-place-picker/issues">
+      <img alt="Issues" src="https://img.shields.io/github/issues/b0iq/react-native-place-picker?color=0088ff" />
+    </a>
+    <a href="https://github.com/b0iq/react-native-place-picker/pulls">
+      <img alt="GitHub pull requests" src="https://img.shields.io/github/issues-pr/b0iq/react-native-place-picker?color=0088ff" />
+    </a>
+    <br />
+    <br />
+  </p>
 
 ### How is it working?
+
 > This plugin is built only by create native page `UIViewController` for iOS or `Activity` for Android. and present the page in front of React Native Application without any special dependencies just native code
 
 ## Installation
@@ -23,17 +36,22 @@ yarn add react-native-place-picker
 
 ### Expo
 
-* You need to add `expo-dev-client` and run `expo run:ios` or `expo run:android` 
+- You need to add `expo-dev-client` and run `expo run:ios` or `expo run:android`
 
 > **Info** Expo managed app not yet supported 🚧
 
 ### iOS
 
-* No further steps needed 😁
+- If you want to enable user current location button you have to add this to your `Info.plist`
+
+```xml
+<key>NSLocationWhenInUseUsageDescription</key>
+<string>YOUR_PURPOSE_HERE</string>
+```
 
 ### Android ⚠️
 
-* Add to your `AndroidManifest.xml` you Google Map API Key or your application will crash
+- Add to your `AndroidManifest.xml` you Google Map API Key or your application will crash
 
 ```xml
 <meta-data
@@ -44,29 +62,22 @@ yarn add react-native-place-picker
 ## Usage
 
 ### Request
+
 ```js
 import { pickPlace } from 'react-native-place-picker';
 
-const OPTIONS = {
-
-    title: "Choose Place", // Modal title
-
-    // Initial map location coordinates
-    initialCoordinates: {
-        latitude: 25.2048,
-        longitude: 55.2708
-    }
-
-};
-
-pickPlace(OPTIONS)
-    .then(console.log)
-    .catch(console.log)
+pickPlace({
+  enableUserLocation: true,
+  enableGeocoding: true,
+  color: '#FF00FF',
+  //...etc
+})
+  .then(console.log)
+  .catch(console.log);
 
 // or
 
-pickPlace().then(console.log).catch(console.log)
-
+pickPlace().then(console.log).catch(console.log);
 ```
 
 ### Result
@@ -74,11 +85,19 @@ pickPlace().then(console.log).catch(console.log)
 ```ts
 
 {
-    // Determine if user did cancel th operation
-    canceled: boolean,
-    // Coordinates values
-    latitude: number,
-    longitude: number,
+    /**
+     * @description Selected coordinate.
+     */
+    coordinate: PlacePickerCoordinate;
+    /**
+     * @description Geocoded address for selected location.
+     * @if `enableGeocoding: true`
+     */
+    address?: PlacePickerAddress;
+    /**
+     * @description Did cancel the place picker window without selecting.
+     */
+    didCancel: boolean;
 }
 
 ```

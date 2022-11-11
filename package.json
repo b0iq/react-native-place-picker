@@ -1,6 +1,6 @@
 {
   "name": "react-native-place-picker",
-  "version": "1.0.3",
+  "version": "2.1.0",
   "description": "Pick any place with single click 🚀",
   "main": "lib/commonjs/index",
   "module": "lib/module/index",
@@ -13,23 +13,27 @@
     "android",
     "ios",
     "cpp",
-    "react-native-place-picker.podspec",
+    "*.podspec",
     "!lib/typescript/example",
-    "!android/build",
     "!ios/build",
+    "!android/build",
+    "!android/gradle",
+    "!android/gradlew",
+    "!android/gradlew.bat",
+    "!android/local.properties",
     "!**/__tests__",
     "!**/__fixtures__",
-    "!**/__mocks__"
+    "!**/__mocks__",
+    "!**/.*"
   ],
   "scripts": {
     "test": "jest",
     "typescript": "tsc --noEmit",
     "lint": "eslint \"**/*.{js,ts,tsx}\"",
-    "prepare": "husky install && bob build",
+    "prepare": "bob build",
     "release": "release-it",
     "example": "yarn --cwd example",
-    "pods": "cd example && pod-install --quiet",
-    "bootstrap": "yarn example && yarn && yarn pods"
+    "bootstrap": "yarn example && yarn install && yarn example pods"
   },
   "keywords": [
     "react-native",
@@ -45,7 +49,7 @@
     "android"
   ],
   "repository": "https://github.com/b0iq/react-native-place-picker",
-  "author": "b0iq <contact@b0iq.com> (https://github.com/b0iq/react-native-place-picker)",
+  "author": "b0iq <contact@b0iq.com> (https://github.com/b0iq)",
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/b0iq/react-native-place-picker/issues"
@@ -55,25 +59,28 @@
     "registry": "https://registry.npmjs.org/"
   },
   "devDependencies": {
-    "@commitlint/config-conventional": "^11.0.0",
-    "@react-native-community/eslint-config": "^2.0.0",
-    "@release-it/conventional-changelog": "^2.0.0",
-    "@types/jest": "^27.0.3",
-    "@types/react": "^17.0.37",
-    "@types/react-native": "^0.67.8",
-    "commitlint": "^11.0.0",
+    "@arkweid/lefthook": "^0.7.7",
+    "@commitlint/config-conventional": "^17.0.2",
+    "@react-native-community/eslint-config": "^3.0.2",
+    "@release-it/conventional-changelog": "^5.0.0",
+    "@types/jest": "^28.1.2",
+    "@types/react": "~17.0.21",
+    "@types/react-native": "0.70.0",
+    "commitlint": "^17.0.2",
     "eslint": "^8.4.1",
-    "eslint-config-prettier": "^7.0.0",
-    "eslint-plugin-prettier": "^3.1.3",
-    "husky": "^6.0.0",
-    "jest": "^27.4.3",
+    "eslint-config-prettier": "^8.5.0",
+    "eslint-plugin-prettier": "^4.0.0",
+    "jest": "^28.1.1",
     "pod-install": "^0.1.0",
     "prettier": "^2.0.5",
-    "react": "17.0.2",
-    "react-native": "0.66.3",
-    "react-native-builder-bob": "^0.18.0",
-    "release-it": "^14.2.2",
+    "react": "18.1.0",
+    "react-native": "0.70.5",
+    "react-native-builder-bob": "^0.20.1",
+    "release-it": "^15.0.0",
     "typescript": "^4.5.2"
+  },
+  "resolutions": {
+    "@types/react": "17.0.21"
   },
   "peerDependencies": {
     "react": "*",
