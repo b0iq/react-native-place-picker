@@ -53,7 +53,6 @@ export default function App() {
     >
       <Text style={styles.title}>Place Picker Playground</Text>
       <Text style={styles.subtitle}>{'(Click to edit)'}</Text>
-      <Button label="Pick Place w/o options" onPress={pressHandler} />
       <Row
         label="Presentation Style"
         value={
@@ -239,6 +238,7 @@ export default function App() {
         label="Pick Place with options"
         onPress={pressHandlerWithOptions}
       />
+      <Button red label="Pick Place" onPress={pressHandler} />
       {results && (
         <>
           <Text style={styles.title}>Results:</Text>

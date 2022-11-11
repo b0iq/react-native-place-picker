@@ -1,7 +1,26 @@
 # react-native-place-picker
 
-Pick any place with single click 🚀
 ![HEADER](HEADER.png)
+
+  <p align="center">
+    <a href="https://github.com/b0iq/react-native-place-picker/actions">
+      <img alt="Tests Passing" src="https://github.com/anuraghazra/github-readme-stats/workflows/Test/badge.svg" />
+    </a>
+    <a href="https://github.com/anuraghazra/github-readme-stats/graphs/contributors">
+      <img alt="GitHub Contributors" src="https://img.shields.io/github/contributors/b0iq/react-native-place-picker" />
+    </a>
+    <a href="https://codecov.io/gh/b0iq/react-native-place-picker">
+      <img src="https://codecov.io/gh/b0iq/react-native-place-picker/branch/master/graph/badge.svg" />
+    </a>
+    <a href="https://github.com/b0iq/react-native-place-picker/issues">
+      <img alt="Issues" src="https://img.shields.io/github/issues/b0iq/react-native-place-picker?color=0088ff" />
+    </a>
+    <a href="https://github.com/b0iq/react-native-place-picker/pulls">
+      <img alt="GitHub pull requests" src="https://img.shields.io/github/issues-pr/b0iq/react-native-place-picker?color=0088ff" />
+    </a>
+    <br />
+    <br />
+  </p>
 
 ### How is it working?
 

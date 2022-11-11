@@ -3,13 +3,15 @@ import { TouchableOpacity, View, Text, StyleSheet } from 'react-native';
 
 export const Button = ({
   label,
+  red = false,
   onPress = () => {},
 }: {
   label: string;
+  red?: boolean;
   onPress?: () => void;
 }) => (
   <TouchableOpacity onPress={onPress}>
-    <View style={styles.button}>
+    <View style={[styles.button, red && { backgroundColor: '#FF0000' }]}>
       <Text style={styles.buttonLabel}>{label}</Text>
     </View>
   </TouchableOpacity>
