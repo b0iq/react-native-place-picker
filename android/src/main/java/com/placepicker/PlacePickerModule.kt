@@ -1,11 +1,13 @@
 package com.placepicker
 import android.app.Activity
 import android.content.Intent
+import android.widget.Toast
 import com.facebook.react.bridge.*
 
 const val MAP_TITLE = "com.placepicker.MAP_TITLE"
 const val MAP_LATITUDE = "com.placepicker.MAP_LATITUDE"
 const val MAP_LONGITUDE = "com.placepicker.MAP_LONGITUDE"
+
 
 class PlacePickerModule(reactContext: ReactApplicationContext) :
   ReactContextBaseJavaModule(reactContext) {
@@ -64,6 +66,7 @@ class PlacePickerModule(reactContext: ReactApplicationContext) :
   override fun getName(): String {
     return NAME
   }
+
   @ReactMethod
   fun pickPlace(promise: Promise) {
     val activity = currentActivity

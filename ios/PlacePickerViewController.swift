@@ -8,9 +8,10 @@
 
 import UIKit
 import MapKit
-class MapViewController: UIViewController {
+class PlacePickerViewController: UIViewController {
     
     private let resolver: RCTPromiseResolveBlock
+    private let rejector: RCTPromiseRejectBlock
     private let options: PlacePickerOptions
     
     private var firstMapLoad: Bool = true
@@ -22,8 +23,9 @@ class MapViewController: UIViewController {
     private let geocoder = CLGeocoder()
     private let locationManager = CLLocationManager()
     
-    init(_ resolver: @escaping RCTPromiseResolveBlock, _ options: PlacePickerOptions) {
+    init(_ resolver: @escaping RCTPromiseResolveBlock, _ rejector: @escaping RCTPromiseRejectBlock, _ options: PlacePickerOptions) {
         self.resolver = resolver
+        self.rejector = rejector
         self.options = options
         super.init(nibName: nil, bundle: nil)
     }
@@ -31,7 +33,7 @@ class MapViewController: UIViewController {
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
-
+    
     // MARK: - UI Views
     
     private lazy var mapPinShadow: UIView = {
@@ -103,8 +105,8 @@ class MapViewController: UIViewController {
         NSLayoutConstraint.activate([
             mapView.widthAnchor.constraint(equalTo: self.view.widthAnchor),
             mapView.heightAnchor.constraint(equalTo: self.view.heightAnchor),
-//            mapView.leadingAnchor.constraint(equalTo: self.view.leadingAnchor),
-//            mapView.trailingAnchor.constraint(equalTo: self.view.trailingAnchor),
+            //            mapView.leadingAnchor.constraint(equalTo: self.view.leadingAnchor),
+            //            mapView.trailingAnchor.constraint(equalTo: self.view.trailingAnchor),
         ])
         self.view.addSubview(mapPinShadow)
         NSLayoutConstraint.activate([
@@ -231,16 +233,16 @@ class MapViewController: UIViewController {
         locationManager.requestLocation()
     }
     @objc private func closePicker() {
-        do {
-            let result = try PlacePickerResult(
-                coordinate: PlacePickerCoordinate(latitude: mapView.centerCoordinate.latitude, longitude: mapView.centerCoordinate.longitude),
-                address: PlacePickerAddress(with: self.lastLocation),
-                didCancel: true,
-                userCurrentLocation: userCurrentLocation).asDictionary()
-            resolver(result)
-        } catch {
-            
+        if (options.rejectOnCancel) {
+            rejector("cancel", "User cancel the operation and `rejectOnCancel` is enabled", NSError(domain: "pickerView", code: 13))
+            self.dismiss(animated: true)
+            return
         }
+        resolver(try? PlacePickerResult(
+            coordinate: PlacePickerCoordinate(latitude: mapView.centerCoordinate.latitude, longitude: mapView.centerCoordinate.longitude),
+            address: PlacePickerAddress(with: self.lastLocation),
+            didCancel: true,
+            userCurrentLocation: userCurrentLocation).asDictionary())
         self.dismiss(animated: true)
     }
     
@@ -271,24 +273,28 @@ class MapViewController: UIViewController {
         startPinAnimation()
     }
     private func mapDidMove() {
-        setLoading(true)
-        geocoder.reverseGeocodeLocation(CLLocation(latitude: mapView.centerCoordinate.latitude, longitude: mapView.centerCoordinate.longitude), preferredLocale: Locale(identifier: options.locale)) { location, error in
-            if let _ = error {
+        if (options.enableGeocoding) {
+            setLoading(true)
+            geocoder.reverseGeocodeLocation(CLLocation(latitude: mapView.centerCoordinate.latitude, longitude: mapView.centerCoordinate.longitude), preferredLocale: Locale(identifier: options.locale)) { location, error in
+                if let _ = error {
+                    self.setLoading(false)
+                    self.endPinAnimation()
+                    self.lastLocation = nil
+                    self.navigationItem.searchController?.searchBar.placeholder = self.options.searchPlaceholder
+                    return
+                }
+                self.lastLocation = location?.first
+                if let name = location?.first?.name {
+                    self.navigationItem.searchController?.searchBar.placeholder = name
+                } else {
+                    self.navigationItem.searchController?.searchBar.placeholder = self.options.searchPlaceholder
+                }
                 self.setLoading(false)
                 self.endPinAnimation()
-                self.lastLocation = nil
-                self.navigationItem.searchController?.searchBar.placeholder = self.options.searchPlaceholder
-                return
+                
             }
-            self.lastLocation = location?.first
-            if let name = location?.first?.name {
-                self.navigationItem.searchController?.searchBar.placeholder = name
-            } else {
-                self.navigationItem.searchController?.searchBar.placeholder = self.options.searchPlaceholder
-            }
-            self.setLoading(false)
+        } else {
             self.endPinAnimation()
-            
         }
     }
     
@@ -324,7 +330,7 @@ class MapViewController: UIViewController {
     }
 }
 
-extension MapViewController: MKMapViewDelegate {
+extension PlacePickerViewController: MKMapViewDelegate {
     func mapView(_ mapView: MKMapView, regionDidChangeAnimated animated: Bool) {
         mapDidMove()
         
@@ -337,7 +343,7 @@ extension MapViewController: MKMapViewDelegate {
     }
     
 }
-extension MapViewController: UISearchBarDelegate {
+extension PlacePickerViewController: UISearchBarDelegate {
     func searchBarShouldEndEditing(_ searchBar: UISearchBar) -> Bool {
         true
     }
@@ -365,7 +371,7 @@ extension MapViewController: UISearchBarDelegate {
         }
     }
 }
-extension MapViewController: CLLocationManagerDelegate {
+extension PlacePickerViewController: CLLocationManagerDelegate {
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
         if let coordinate = locations.first?.coordinate {
             userCurrentLocation = true
