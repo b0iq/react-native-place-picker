@@ -5,8 +5,6 @@
 //  Created by b0iq on 17/06/2022.
 //
 
-// TODO: Add user search
-// TODO: Add user location
 
 import UIKit
 import MapKit
@@ -16,6 +14,7 @@ class MapViewController: UIViewController {
     private let options: PlacePickerOptions
     
     private var firstMapLoad: Bool = true
+    private var userCurrentLocation: Bool = false
     private var lastLocation: CLPlacemark?
     private var searchInputDebounceTimer:Timer?
     private var mapMoveDebounceTimer:Timer?
@@ -51,13 +50,13 @@ class MapViewController: UIViewController {
             pinImage = UIImageView(image: UIImage(named: "mappin"))
         }
         pinImage.contentMode = .center
-        pinImage.tintColor = UIColor(options.contrast)
+        pinImage.tintColor = UIColor(options.contrastColor)
         pinImage.frame = CGRect(x: 0, y: 0, width: 40, height: 40)
         return pinImage
     }()
     private lazy var pinLoading: UIActivityIndicatorView = {
         let loader = UIActivityIndicatorView(frame: CGRect(x: 0, y: 0, width: 40, height: 40))
-        loader.color = UIColor(options.contrast)
+        loader.color = UIColor(options.contrastColor)
         loader.hidesWhenStopped = true
         return loader
     }()
@@ -95,9 +94,7 @@ class MapViewController: UIViewController {
         map.showsCompass        = true
         map.showsScale          = true
         map.region = MKCoordinateRegion(center: CLLocationCoordinate2D(latitude: options.initialCoordinates.latitude, longitude: options.initialCoordinates.longitude), latitudinalMeters: 1000, longitudinalMeters: 1000)
-        
         map.translatesAutoresizingMaskIntoConstraints = false
-        
         return map
     }()
     private func setupViews() {
@@ -186,7 +183,7 @@ class MapViewController: UIViewController {
             self.navigationController?.navigationBar.prefersLargeTitles = true
         }
         var rightItems = [customDoneButtonItem]
-        if (options.enableUserlocation) {
+        if (options.enableUserLocation) {
             rightItems.append(customUserLocationButtonItem)
         }
         self.navigationItem.leftBarButtonItem = customCancelButtonItem
@@ -206,7 +203,7 @@ class MapViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         self.title = options.title
-        if (options.enableUserlocation) {
+        if (options.enableUserLocation) {
             locationManager.delegate = self
             locationManager.requestWhenInUseAuthorization()
         }
@@ -234,16 +231,31 @@ class MapViewController: UIViewController {
         locationManager.requestLocation()
     }
     @objc private func closePicker() {
-        let coords = mapView.centerCoordinate
-        resolver(["latitude": coords.latitude, "longitude": coords.longitude, "canceled": true])
+        do {
+            let result = try PlacePickerResult(
+                coordinate: PlacePickerCoordinate(latitude: mapView.centerCoordinate.latitude, longitude: mapView.centerCoordinate.longitude),
+                address: PlacePickerAddress(with: self.lastLocation),
+                didCancel: true,
+                userCurrentLocation: userCurrentLocation).asDictionary()
+            resolver(result)
+        } catch {
+            
+        }
         self.dismiss(animated: true)
     }
     
     @objc private func finalizePicker() {
-        mapView.setCenter(CLLocationCoordinate2D(latitude: options.initialCoordinates.latitude, longitude: options.initialCoordinates.longitude), animated: true)
-//        let coords = mapView.centerCoordinate
-//        resolver(["latitude": coords.latitude, "longitude": coords.longitude, "canceled": false])
-//        self.dismiss(animated: true)
+        do {
+            let result = try PlacePickerResult(
+                coordinate: PlacePickerCoordinate(latitude: mapView.centerCoordinate.latitude, longitude: mapView.centerCoordinate.longitude),
+                address: PlacePickerAddress(with: self.lastLocation),
+                didCancel: false,
+                userCurrentLocation: userCurrentLocation).asDictionary()
+            resolver(result)
+        } catch {
+            
+        }
+        self.dismiss(animated: true)
     }
     
     private func setLoading(_ state: Bool) {
@@ -264,13 +276,16 @@ class MapViewController: UIViewController {
             if let _ = error {
                 self.setLoading(false)
                 self.endPinAnimation()
+                self.lastLocation = nil
+                self.navigationItem.searchController?.searchBar.placeholder = self.options.searchPlaceholder
                 return
             }
-            
+            self.lastLocation = location?.first
             if let name = location?.first?.name {
                 self.navigationItem.searchController?.searchBar.placeholder = name
+            } else {
+                self.navigationItem.searchController?.searchBar.placeholder = self.options.searchPlaceholder
             }
-            
             self.setLoading(false)
             self.endPinAnimation()
             
@@ -316,7 +331,11 @@ extension MapViewController: MKMapViewDelegate {
     }
     func mapView(_ mapView: MKMapView, regionWillChangeAnimated animated: Bool) {
         mapWillMove()
+        if (userCurrentLocation && !animated) {
+            userCurrentLocation = false
+        }
     }
+    
 }
 extension MapViewController: UISearchBarDelegate {
     func searchBarShouldEndEditing(_ searchBar: UISearchBar) -> Bool {
@@ -349,6 +368,7 @@ extension MapViewController: UISearchBarDelegate {
 extension MapViewController: CLLocationManagerDelegate {
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
         if let coordinate = locations.first?.coordinate {
+            userCurrentLocation = true
             mapView.setCenter(coordinate, animated: true)
         }
     }
