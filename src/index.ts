@@ -26,11 +26,7 @@ const PlacePicker = PlacePickerModule
     );
 
 export function pickPlace(
-  options: PlacePickerOptions | undefined = undefined
+  options: PlacePickerOptions | undefined = {}
 ): Promise<PlacePickerResults> {
-  if (options !== undefined) {
-    return PlacePicker.pickPlaceWithOptions(options);
-  } else {
-    return PlacePicker.pickPlace();
-  }
+  return PlacePicker.pickPlace(options);
 }
