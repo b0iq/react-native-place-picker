@@ -5,6 +5,5 @@ import com.facebook.react.bridge.Promise
 
 abstract class PlacePickerSpec internal constructor(context: ReactApplicationContext) :
   ReactContextBaseJavaModule(context) {
-
   abstract fun pickPlace(options: ReadableMap, promise: Promise)
 }
