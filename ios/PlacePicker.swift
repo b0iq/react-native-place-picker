@@ -1,4 +1,3 @@
-import CoreLocation
 @objc(PlacePicker)
 class PlacePicker: NSObject {
     

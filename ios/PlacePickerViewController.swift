@@ -40,7 +40,6 @@ class PlacePickerViewController: UIViewController {
         shadowView.backgroundColor = UIColor(options.color).withAlphaComponent(0.5)
         shadowView.translatesAutoresizingMaskIntoConstraints = false
         shadowView.layer.cornerRadius = 2.5
-        shadowView.reactZIndex = 1000
         return shadowView
     }()
     private lazy var pinImage: UIView = {

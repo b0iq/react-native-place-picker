@@ -138,6 +138,14 @@
     "node_modules/",
     "lib/"
   ],
+  "codegenConfig": {
+    "name": "RNPlacePickerSpec",
+    "type": "modules",
+    "jsSrcsDir": "src",
+    "android": {
+      "javaPackageName": "com.placepicker"
+    }
+  },
   "prettier": {
     "quoteProps": "consistent",
     "singleQuote": true,
