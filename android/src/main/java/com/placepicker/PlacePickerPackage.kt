@@ -1,16 +1,34 @@
 package com.placepicker
-import com.facebook.react.ReactPackage
-import com.facebook.react.bridge.NativeModule
+import com.facebook.react.TurboReactPackage
 import com.facebook.react.bridge.ReactApplicationContext
-import com.facebook.react.uimanager.ViewManager
+import com.facebook.react.bridge.NativeModule
+import com.facebook.react.module.model.ReactModuleInfoProvider
+import com.facebook.react.module.model.ReactModuleInfo
+import java.util.HashMap
 
-
-class PlacePickerPackage : ReactPackage {
-  override fun createNativeModules(reactContext: ReactApplicationContext): List<NativeModule> {
-    return listOf(PlacePickerModule(reactContext))
+class PlacePickerPackage : TurboReactPackage() {
+  override fun getModule(name: String, reactContext: ReactApplicationContext): NativeModule? {
+    return if (name == PlacePickerModule.NAME) {
+      PlacePickerModule(reactContext)
+    } else {
+      null
+    }
   }
 
-  override fun createViewManagers(reactContext: ReactApplicationContext): List<ViewManager<*, *>> {
-    return emptyList()
+  override fun getReactModuleInfoProvider(): ReactModuleInfoProvider {
+    return ReactModuleInfoProvider {
+      val moduleInfos: MutableMap<String, ReactModuleInfo> = HashMap()
+      val isTurboModule: Boolean = BuildConfig.IS_NEW_ARCHITECTURE_ENABLED
+      moduleInfos[PlacePickerModule.NAME] = ReactModuleInfo(
+        PlacePickerModule.NAME,
+        PlacePickerModule.NAME,
+        false,  // canOverrideExistingModule
+        false,  // needsEagerInit
+        true,  // hasConstants
+        false,  // isCxxModule
+        isTurboModule // isTurboModule
+      )
+      moduleInfos
+    }
   }
 }

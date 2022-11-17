@@ -1,5 +1,1 @@
-{
-  "fsevents_latency": 0.05,
-  "fsevents_try_resync": "true",
-  "prefer_split_fsevents_watcher": "true"
-}
+{}

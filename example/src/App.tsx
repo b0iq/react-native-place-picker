@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 
 import { StyleSheet, Text, ScrollView, Alert } from 'react-native';
 import {
@@ -8,8 +8,33 @@ import {
 } from 'react-native-place-picker';
 import { Button } from './Components/Button';
 import { Row } from './Components/Row';
+// @ts-ignore
+import { version as coreVersion } from 'react-native/Libraries/Core/ReactNativeVersion';
+function getReactNativeVersion() {
+  const version = `${coreVersion.major}.${coreVersion.minor}.${coreVersion.patch}`;
+  return coreVersion.prerelease
+    ? version + `-${coreVersion.prerelease}`
+    : version;
+}
 
-export default function App() {
+function isTMActive() {
+  // @ts-ignore
+  return global.__turboModuleProxy != null;
+}
+
+export default function App(props) {
+  const [isFabric, setFabric] = useState(false);
+  const onLayout = useCallback(
+    (ev) => {
+      setFabric(
+        Boolean(ev.currentTarget._internalInstanceHandle?.stateNode?.canonical)
+      );
+    },
+    [setFabric]
+  );
+
+  const [isTM] = useState(isTMActive());
+
   const [results, setResults] = useState<PlacePickerResults>();
   const [options, setOptions] = useState<PlacePickerOptions>({
     presentationStyle: 'fullscreen',
@@ -48,6 +73,8 @@ export default function App() {
 
   return (
     <ScrollView
+      onLayout={onLayout}
+      contentInsetAdjustmentBehavior="automatic"
       style={styles.scrollView}
       contentContainerStyle={styles.container}
     >
@@ -245,6 +272,16 @@ export default function App() {
           <Text style={styles.code}>{JSON.stringify(results, null, '\t')}</Text>
         </>
       )}
+
+      <Text style={styles.title}>Debug Info:</Text>
+      <Row label="React Native Version" value={getReactNativeVersion()} />
+      <Row
+        label="Hermes enabled"
+        value={global.HermesInternal ? 'true' : 'false'}
+      />
+      <Row label="Turbo Modules" value={isTM ? 'true' : 'false'} />
+      <Row label="Fabric" value={String(isFabric)} />
+      <Row label="concurrentRoot" value={String(props.concurrentRoot)} />
     </ScrollView>
   );
 }

@@ -9,7 +9,7 @@ import com.fasterxml.jackson.module.kotlin.convertValue
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 
 class PlacePickerModule(reactContext: ReactApplicationContext) :
-  ReactContextBaseJavaModule(reactContext) {
+  PlacePickerSpec(reactContext) {
 
   private var pickerPromise: Promise? = null
 
@@ -79,9 +79,7 @@ class PlacePickerModule(reactContext: ReactApplicationContext) :
   }
 
   @ReactMethod
-  fun pickPlace(promise: Promise) { start(promise) }
-  @ReactMethod
-  fun pickPlaceWithOptions(options: ReadableMap, promise: Promise) { start(promise, options) }
+  override fun pickPlace(options: ReadableMap, promise: Promise) { start(promise, options) }
   companion object {
     const val PLACE_PICKER_REQUEST = 1
     const val E_ACTIVITY_DOES_NOT_EXIST = "E_ACTIVITY_DOES_NOT_EXIST"

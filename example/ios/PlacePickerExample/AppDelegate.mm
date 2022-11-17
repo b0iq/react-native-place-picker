@@ -41,6 +41,9 @@ static NSString *const kRNConcurrentRoot = @"concurrentRoot";
   _contextContainer->insert("ReactNativeConfig", _reactNativeConfig);
   _bridgeAdapter = [[RCTSurfacePresenterBridgeAdapter alloc] initWithBridge:bridge contextContainer:_contextContainer];
   bridge.surfacePresenter = _bridgeAdapter.surfacePresenter;
+  NSLog(@"****************************************** NEW ARCH");
+#else
+  NSLog(@"****************************************** NO NEW ARCH");
 #endif
 
   NSDictionary *initProps = [self prepareInitialProps];

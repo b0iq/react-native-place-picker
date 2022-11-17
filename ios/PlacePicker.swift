@@ -1,4 +1,3 @@
-import CoreLocation
 @objc(PlacePicker)
 class PlacePicker: NSObject {
     
@@ -22,18 +21,13 @@ class PlacePicker: NSObject {
     }
     
     @objc
-    func pickPlaceWithOptions(_ options: NSDictionary, withResolver resolve: @escaping RCTPromiseResolveBlock, withRejector reject: @escaping RCTPromiseRejectBlock) {
+    func pickPlace(_ options: NSDictionary, withResolver resolve: @escaping RCTPromiseResolveBlock, withRejector reject: @escaping RCTPromiseRejectBlock) {
         do {
             let opts: PlacePickerOptions = try options.asClass()
             start(resolve, reject, options: opts)
         } catch {
             reject("parsing", "Cannot parse options", NSError(domain: "pickPlaceWithOptions", code: 10))
         }
-        
-    }
-    @objc
-    func pickPlace(_ resolve: @escaping RCTPromiseResolveBlock, withRejector reject: @escaping RCTPromiseRejectBlock) {
-        start(resolve, reject)
     }
     
 }
