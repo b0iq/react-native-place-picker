@@ -8,6 +8,5 @@
 import Foundation
 
 enum PlacePickerPresentationStyle: String, Codable {
-    case modal = "modal"
-    case fullscreen = "fullscreen"
+    case modal, fullscreen
 }

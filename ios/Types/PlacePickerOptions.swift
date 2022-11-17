@@ -23,18 +23,7 @@ class PlacePickerOptions: Codable {
     var rejectOnCancel: Bool
     
     enum CodingKeys: String, CodingKey {
-        case presentationStyle = "presentationStyle"
-        case title = "title"
-        case searchPlaceholder = "searchPlaceholder"
-        case color = "color"
-        case contrastColor = "contrastColor"
-        case locale = "locale"
-        case initialCoordinates = "initialCoordinates"
-        case enableGeocoding = "enableGeocoding"
-        case enableSearch = "enableSearch"
-        case enableUserLocation = "enableUserLocation"
-        case enableLargeTitle = "enableLargeTitle"
-        case rejectOnCancel = "rejectOnCancel"
+        case presentationStyle, title, searchPlaceholder, color, contrastColor, locale, initialCoordinates, enableGeocoding, enableSearch, enableUserLocation, enableLargeTitle, rejectOnCancel
     }
     init() {
         self.presentationStyle = PlacePickerPresentationStyle.fullscreen
