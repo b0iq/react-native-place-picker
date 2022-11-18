@@ -25,6 +25,20 @@
     <br />
   </p>
 
+### Features
+
+- [x] Theme customization.
+- [x] UI written natively.
+- [x] Location reverse-geocoding (coordinate -> address).
+- [x] Searchable (users can search for location).
+- [x] Device location.
+- [x] Fully configurable. 
+- [x] Supporting Turbo Modules (New Arch) with backward capability.
+- [x] Renders on top of the app (Blazing Fast).
+- [x] Well typed.
+- [x] Significantly small package.
+- [x] No peer depedancies except React and React-Native <sup>[[1]](#extra) </sup> 
+
 ### How is it working?
 
 > This plugin is built only by create native page `UIViewController` for iOS or `Activity` for Android. and present the page in front of React Native Application without any special dependencies just native code
@@ -63,7 +77,7 @@ yarn add react-native-place-picker
 ```
 
 ## Usage
-
+# [Checkout the documentation](https://b0iq.github.io/react-native-place-picker)
 ### Request
 
 ```js
@@ -112,3 +126,6 @@ See the [contributing guide](CONTRIBUTING.md) to learn how to contribute to the 
 ## License
 
 MIT
+
+## Extra
+[1] The only liberary is used: Kotlin object parsing liberary `com.fasterxml.jackson.module:jackson-module-kotlin:2.14.+` to parse Javascript parameters easily.
