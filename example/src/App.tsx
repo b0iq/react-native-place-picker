@@ -22,7 +22,7 @@ function isTMActive() {
   return global.__turboModuleProxy != null;
 }
 
-export default function App(props) {
+export default function App(props: any) {
   const [isFabric, setFabric] = useState(false);
   const onLayout = useCallback(
     (ev) => {
@@ -277,6 +277,7 @@ export default function App(props) {
       <Row label="React Native Version" value={getReactNativeVersion()} />
       <Row
         label="Hermes enabled"
+        // @ts-ignore
         value={global.HermesInternal ? 'true' : 'false'}
       />
       <Row label="Turbo Modules" value={isTM ? 'true' : 'false'} />
