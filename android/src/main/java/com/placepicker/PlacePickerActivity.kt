@@ -124,7 +124,7 @@ class PlacePickerActivity : AppCompatActivity(), OnMapReadyCallback,
     val long = mMap.cameraPosition.target.longitude
     mapMoveTask = Executors.newSingleThreadScheduledExecutor().schedule({
       val address = geocoder.getFromLocation(lat, long, 1)
-      lastAddress = address.first()
+      lastAddress = address?.first()
       runOnUiThread {
         try {
           supportActionBar?.subtitle = lastAddress?.featureName ?: "Unknown location"
@@ -191,19 +191,21 @@ class PlacePickerActivity : AppCompatActivity(), OnMapReadyCallback,
       override fun onQueryTextSubmit(query: String): Boolean {
         try {
           val location = geocoder.getFromLocationName(query, 1)
-          if (location.isEmpty()) {
+          if (location?.isEmpty()!!) {
             Toast.makeText(that, "No location was founded", Toast.LENGTH_SHORT).show()
             return true
           }
-          val address = location.first()
+          val address = location?.first()
+          if (address != null) {
             mMap.animateCamera(
               CameraUpdateFactory.newLatLngZoom(
-                LatLng(
-                  address.latitude,
-                  address.longitude
-                ), 15F
+                      LatLng(
+                        address.latitude,
+                        address.longitude
+                      ), 15F
               )
             )
+          }
           searchView.onActionViewCollapsed()
         } catch (error: Exception) {
           Toast.makeText(that, error.message, Toast.LENGTH_SHORT).show()
