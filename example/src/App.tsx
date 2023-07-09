@@ -282,7 +282,10 @@ export default function App(props: any) {
       />
       <Row label="Turbo Modules" value={isTM ? 'true' : 'false'} />
       <Row label="Fabric" value={String(isFabric)} />
-      <Row label="concurrentRoot" value={String(props.concurrentRoot)} />
+      <Row
+        label="concurrentRoot"
+        value={String(Boolean(props.concurrentRoot))}
+      />
     </ScrollView>
   );
 }

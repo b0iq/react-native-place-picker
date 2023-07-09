@@ -10,7 +10,9 @@
   // You can add your custom initial props in the dictionary below.
   // They will be passed down to the ViewController used by React Native.
   self.initialProps = @{};
-
+  #ifdef RCT_NEW_ARCH_ENABLED
+    self.initProps[kRNConcurrentRoot] = @([self concurrentRootEnabled]);
+  #endif
   return [super application:application didFinishLaunchingWithOptions:launchOptions];
 }
 

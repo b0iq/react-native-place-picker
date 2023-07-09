@@ -22,6 +22,7 @@ class PlacePickerViewController: UIViewController {
     
     private let geocoder = CLGeocoder()
     private let locationManager = CLLocationManager()
+    var activityIndicator: UIActivityIndicatorView?
     
     // MARK: - Inits
     init(_ resolver: @escaping RCTPromiseResolveBlock, _ rejector: @escaping RCTPromiseRejectBlock, _ options: PlacePickerOptions) {
@@ -173,6 +174,7 @@ class PlacePickerViewController: UIViewController {
         if (options.enableSearch) {
             let searchController = UISearchController(searchResultsController: nil)
             navigationItem.searchController = searchController
+            
             searchController.searchBar.placeholder = options.searchPlaceholder
             searchController.searchBar.enablesReturnKeyAutomatically = true
             searchController.searchBar.delegate = self
@@ -352,6 +354,7 @@ extension PlacePickerViewController: MKMapViewDelegate {
     
 }
 extension PlacePickerViewController: UISearchBarDelegate {
+
     func searchBarShouldEndEditing(_ searchBar: UISearchBar) -> Bool {
         true
     }
@@ -365,7 +368,29 @@ extension PlacePickerViewController: UISearchBarDelegate {
     }
     func searchBar(_ searchBar: UISearchBar, textDidChange searchText: String) {
         searchInputDebounceTimer?.invalidate()
+        if #available(iOS 13.0, *) {
+            if activityIndicator == nil {
+                
+                guard let leftView = searchBar.searchTextField.leftView else {
+                    return
+                }
+                
+                let ai = UIActivityIndicatorView(style: .medium)
+                ai.frame = searchBar.convert(leftView.frame, from: leftView.superview)
+                searchBar.addSubview(ai)
+                
+                ai.startAnimating()
+                leftView.isHidden = true
+                activityIndicator = ai
+                
+            }
+        }
         searchInputDebounceTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: false) { _ in
+            if #available(iOS 16.4, *) {
+                searchBar.isEnabled = false
+            }
+            
+            
             self.geocoder.geocodeAddressString(searchText) { places, error in
                 if let error = error {
                     print(error.localizedDescription)
@@ -374,6 +399,18 @@ extension PlacePickerViewController: UISearchBarDelegate {
                     if let location = places?.first?.location?.coordinate {
                         self.mapView.setCenter(location, animated: true)
                     }
+                }
+                if #available(iOS 13.0, *) {
+                    self.activityIndicator?.removeFromSuperview()
+                    self.activityIndicator = nil
+                    
+                    guard let leftView = searchBar.searchTextField.leftView else {
+                        return
+                    }
+                    leftView.isHidden = false
+                }
+                if #available(iOS 16.4, *) {
+                    searchBar.isEnabled = true
                 }
             }
         }
