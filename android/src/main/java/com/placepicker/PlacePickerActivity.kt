@@ -93,7 +93,7 @@ class PlacePickerActivity : AppCompatActivity(), OnMapReadyCallback,
 
     }
 //    mMap.setPadding(10, (supportActionBar?.height ?: 0), 10, getActionBarHeight())
-    mMap.isMyLocationEnabled = options.enableUserLocation
+//  mMap.isMyLocationEnabled = options.enableUserLocation // Cause crash
     mMap.moveCamera(
       CameraUpdateFactory.newLatLngZoom(
         LatLng(
