@@ -1,6 +1,10 @@
 # react-native-place-picker
 
-![HEADER](HEADER.png)
+
+demo | demo video
+:-: | :-:
+![HEADER](HEADER.png) | <video src='https://github.com/b0iq/react-native-place-picker/assets/106549013/550551fd-5e25-40be-9b01-7698f4d48e2e' width=180/>
+
 
   <p align="center">
       <a href="https://badge.fury.io/js/react-native-place-picker">

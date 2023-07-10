@@ -7,6 +7,9 @@ import com.facebook.react.bridge.*
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.convertValue
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import com.facebook.react.bridge.ReactApplicationContext
+import com.facebook.react.bridge.ReactMethod
+import com.facebook.react.bridge.Promise
 
 class PlacePickerModule(reactContext: ReactApplicationContext) :
   PlacePickerSpec(reactContext) {
