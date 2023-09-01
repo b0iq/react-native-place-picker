@@ -9,20 +9,23 @@
 import UIKit
 import MapKit
 class PlacePickerViewController: UIViewController {
-    
     // MARK: - Variables
     private var resolver: RCTPromiseResolveBlock?
     private var rejector: RCTPromiseRejectBlock?
     private let options: PlacePickerOptions
-    
+    private let searchController = UISearchController()
+    private let completer = MKLocalSearchCompleter()
+    private var completerResults: [CustomSearchCompletion] = [] {
+        didSet {
+            searchResultContainer.dataSource = completerResults
+            searchResultContainer.isHidden = completerResults.count < 1
+        }
+    }
     private var firstMapLoad: Bool = true
     private var lastLocation: CLPlacemark?
-    private var searchInputDebounceTimer:Timer?
     private var mapMoveDebounceTimer:Timer?
-    
     private let geocoder = CLGeocoder()
     private let locationManager = CLLocationManager()
-    var activityIndicator: UIActivityIndicatorView?
     
     // MARK: - Inits
     init(_ resolver: @escaping RCTPromiseResolveBlock, _ rejector: @escaping RCTPromiseRejectBlock, _ options: PlacePickerOptions) {
@@ -97,6 +100,14 @@ class PlacePickerViewController: UIViewController {
         return map
     }()
     
+    private lazy var searchResultContainer: DropDown = {
+        let view = DropDown()
+        view.translatesAutoresizingMaskIntoConstraints = false
+        view.isHidden = true
+        view.isOpaque = true
+        return view
+    }()
+    
     // MARK: - UI setup methods
     private func setupViews() {
         // MARK: - 1 Setup map view
@@ -123,16 +134,23 @@ class PlacePickerViewController: UIViewController {
             mapPin.widthAnchor.constraint(equalToConstant: 50),
             mapPin.heightAnchor.constraint(equalToConstant: 50)
         ])
+        self.view.addSubview(searchResultContainer)
+        NSLayoutConstraint.activate([
+            searchResultContainer.widthAnchor.constraint(equalTo: self.view.widthAnchor),
+            searchResultContainer.topAnchor.constraint(equalTo: self.view.safeAreaLayoutGuide.topAnchor),
+            searchResultContainer.bottomAnchor.constraint(equalTo: self.view.bottomAnchor)
+        ])
         
+        searchResultContainer.delegate = self
         // MARK: - 2 Setup naivgation bar
         setupNavigationBar()
     }
     private func setupNavigationBar() {
         // MARK: - 1 Make cancel button
         let customCancelButton = UIButton()
-        customCancelButton.tintColor = .gray
+        customCancelButton.tintColor = UIColor(options.color)
         if #available(iOS 13.0, *) {
-            let cancelImage = UIImage(systemName: "xmark")
+            let cancelImage = UIImage(systemName: "xmark", withConfiguration: UIImage.SymbolConfiguration(pointSize: 16, weight: .bold))
             customCancelButton.setImage(cancelImage, for: .normal)
         } else {
             customCancelButton.setTitle("Cancel", for: .normal)
@@ -141,9 +159,9 @@ class PlacePickerViewController: UIViewController {
         
         // MARK: - 2 Make done button
         let customDoneButton = UIButton()
-        customDoneButton.tintColor = .gray
+        customDoneButton.tintColor = UIColor(options.color)
         if #available(iOS 13.0, *) {
-            let checkImage = UIImage(systemName: "checkmark")
+            let checkImage = UIImage(systemName: "checkmark", withConfiguration: UIImage.SymbolConfiguration(pointSize: 16, weight: .bold))
             customDoneButton.setImage(checkImage, for: .normal)
         } else {
             customDoneButton.setTitle("Done", for: .normal)
@@ -152,9 +170,9 @@ class PlacePickerViewController: UIViewController {
         
         // MARK: - 3 Make user location button
         let customUserLocationButton = UIButton()
-        customUserLocationButton.tintColor = .gray
+        customUserLocationButton.tintColor = UIColor(options.color)
         if #available(iOS 13.0, *) {
-            let checkImage = UIImage(systemName: "location")
+            let checkImage = UIImage(systemName: "location", withConfiguration: UIImage.SymbolConfiguration(pointSize: 16, weight: .bold))
             customUserLocationButton.setImage(checkImage, for: .normal)
         } else {
             customUserLocationButton.setTitle("location", for: .normal)
@@ -162,22 +180,34 @@ class PlacePickerViewController: UIViewController {
         customUserLocationButton.addTarget(self, action: #selector(pickUserLocation), for: .touchUpInside)
         
         if #available(iOS 15.0, *) {
-            customDoneButton.configuration = .gray()
-            customCancelButton.configuration = .gray()
-            customUserLocationButton.configuration = .gray()
+            customDoneButton.configuration = .borderedTinted()
+            customCancelButton.configuration = .borderedProminent()
+            customUserLocationButton.configuration = .bordered()
         }
-        
+
         let customCancelButtonItem = UIBarButtonItem(customView: customCancelButton)
         let customDoneButtonItem = UIBarButtonItem(customView: customDoneButton)
         let customUserLocationButtonItem = UIBarButtonItem(customView: customUserLocationButton)
         
         if (options.enableSearch) {
-            let searchController = UISearchController(searchResultsController: nil)
-            navigationItem.searchController = searchController
-            
+            if #available(iOS 13.0, *) {
+                searchController.automaticallyShowsCancelButton = true
+                searchController.searchBar.searchTextField.clearButtonMode = .whileEditing
+                searchController.searchBar.showsCancelButton = false
+            } else {
+                searchController.searchBar.setValue("OK", forKey: "cancelButtonText")
+            }
             searchController.searchBar.placeholder = options.searchPlaceholder
             searchController.searchBar.enablesReturnKeyAutomatically = true
+            searchController.searchBar.returnKeyType = .search
+           
+            searchController.searchResultsUpdater = self
             searchController.searchBar.delegate = self
+            searchController.obscuresBackgroundDuringPresentation = false
+            searchController.hidesNavigationBarDuringPresentation = false
+            navigationItem.hidesSearchBarWhenScrolling = false
+            definesPresentationContext = true
+            navigationItem.searchController = searchController
         }
         
         if (options.enableLargeTitle) {
@@ -208,9 +238,9 @@ class PlacePickerViewController: UIViewController {
         if (options.enableUserLocation) {
             locationManager.delegate = self
             locationManager.requestWhenInUseAuthorization()
+            completer.delegate = self
         }
         setupViews()
-        
     }
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
@@ -255,9 +285,7 @@ class PlacePickerViewController: UIViewController {
         resolver = nil
         rejector = nil
         
-        DispatchQueue.main.async {
-            self.dismiss(animated: true)
-        }
+        self.dismiss(animated: true)
     }
     @objc private func finalizePicker() {
         do {
@@ -354,66 +382,12 @@ extension PlacePickerViewController: MKMapViewDelegate {
     
 }
 extension PlacePickerViewController: UISearchBarDelegate {
-
     func searchBarShouldEndEditing(_ searchBar: UISearchBar) -> Bool {
-        true
+        self.completerResults.removeAll()
+        return true
     }
     func searchBarSearchButtonClicked(_ searchBar: UISearchBar) {
-        searchInputDebounceTimer?.fire()
-        searchBar.endEditing(true)
-        searchBar.resignFirstResponder()
-        navigationController?.navigationItem.searchController?.isActive = false
-        navigationController?.navigationItem.searchController?.resignFirstResponder()
-        
-    }
-    func searchBar(_ searchBar: UISearchBar, textDidChange searchText: String) {
-        searchInputDebounceTimer?.invalidate()
-        if #available(iOS 13.0, *) {
-            if activityIndicator == nil {
-                
-                guard let leftView = searchBar.searchTextField.leftView else {
-                    return
-                }
-                
-                let ai = UIActivityIndicatorView(style: .medium)
-                ai.frame = searchBar.convert(leftView.frame, from: leftView.superview)
-                searchBar.addSubview(ai)
-                
-                ai.startAnimating()
-                leftView.isHidden = true
-                activityIndicator = ai
-                
-            }
-        }
-        searchInputDebounceTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: false) { _ in
-            if #available(iOS 16.4, *) {
-                searchBar.isEnabled = false
-            }
-            
-            
-            self.geocoder.geocodeAddressString(searchText) { places, error in
-                if let error = error {
-                    print(error.localizedDescription)
-                    return
-                } else {
-                    if let location = places?.first?.location?.coordinate {
-                        self.mapView.setCenter(location, animated: true)
-                    }
-                }
-                if #available(iOS 13.0, *) {
-                    self.activityIndicator?.removeFromSuperview()
-                    self.activityIndicator = nil
-                    
-                    guard let leftView = searchBar.searchTextField.leftView else {
-                        return
-                    }
-                    leftView.isHidden = false
-                }
-                if #available(iOS 16.4, *) {
-                    searchBar.isEnabled = true
-                }
-            }
-        }
+//        print("DID SEARCH")
     }
 }
 extension PlacePickerViewController: CLLocationManagerDelegate {
@@ -424,5 +398,40 @@ extension PlacePickerViewController: CLLocationManagerDelegate {
     }
     func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
         print(error)
+    }
+}
+extension PlacePickerViewController: DropDownButtonDelegate {
+    func didSelect(_ index: Int) {
+        let selectedResult = completerResults[index]
+        if let title = selectedResult.attrTitle?.string, let subTitle = selectedResult.attrSubtitle?.string {
+            let request = MKLocalSearch.Request()
+            request.naturalLanguageQuery = subTitle.contains(title) ? subTitle : title + ", " + subTitle
+            let search = MKLocalSearch(request: request)
+            search.start { [weak self] (result, error) in
+                guard error == nil, let coords = result?.mapItems.first?.placemark.coordinate else {return}
+                self?.mapView.setCenter(coords, animated: true)
+                self?.searchController.searchBar.text = ""
+                self?.searchController.isActive = false
+            }
+        }
+    }
+}
+extension PlacePickerViewController: MKLocalSearchCompleterDelegate {
+    func completerDidUpdateResults(_ completer: MKLocalSearchCompleter) {
+        completerResults = completer.results.map { r in
+            return CustomSearchCompletion(
+                attrTitle: highlightedText(r.title, inRanges: r.titleHighlightRanges),
+                attrSubtitle: highlightedText(r.subtitle, inRanges: r.subtitleHighlightRanges)
+            )
+        }
+    }
+}
+extension PlacePickerViewController: UISearchResultsUpdating {
+    func updateSearchResults(for searchController: UISearchController) {
+        if let searchText = searchController.searchBar.text, !searchText.isEmpty {
+            completer.queryFragment = searchText
+        } else {
+            completerResults.removeAll()
+        }
     }
 }
