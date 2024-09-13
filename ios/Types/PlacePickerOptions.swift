@@ -5,55 +5,31 @@
 //  Created by b0iq on 10/11/2022.
 //
 
-import Foundation
+import ExpoModulesCore
 
-
-class PlacePickerOptions: Codable {
-    var presentationStyle: PlacePickerPresentationStyle
-    var title: String
-    var searchPlaceholder: String
-    var color: String
-    var contrastColor: String
-    var locale: String
-    var initialCoordinates: PlacePickerCoordinate
-    var enableGeocoding: Bool
-    var enableSearch: Bool
-    var enableUserLocation: Bool
-    var enableLargeTitle: Bool
-    var rejectOnCancel: Bool
-    
-    enum CodingKeys: String, CodingKey {
-        case presentationStyle, title, searchPlaceholder, color, contrastColor, locale, initialCoordinates, enableGeocoding, enableSearch, enableUserLocation, enableLargeTitle, rejectOnCancel
-    }
-    init() {
-        self.presentationStyle = PlacePickerPresentationStyle.fullscreen
-        self.title = "Choose Place"
-        self.searchPlaceholder = "Search..."
-        self.color = "FF0000"
-        self.contrastColor = "FFFFFF"
-        self.locale = "en-US"
-        self.initialCoordinates = PlacePickerCoordinate(latitude: 25.2048, longitude: 55.2708)
-        self.enableGeocoding = true
-        self.enableSearch = true
-        self.enableUserLocation = true
-        self.enableLargeTitle = true
-        self.rejectOnCancel = true
-        
-    }
-    required init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        let initialCoords = PlacePickerCoordinate(latitude: 25.2048, longitude: 55.2708)
-        self.presentationStyle = try container.decodeIfPresent(PlacePickerPresentationStyle.self, forKey: .presentationStyle) ??  .fullscreen
-        self.title = try container.decodeIfPresent(String.self, forKey: .title) ??  "Choose Place"
-        self.searchPlaceholder = try container.decodeIfPresent(String.self, forKey: .searchPlaceholder) ??  "Search..."
-        self.color = try container.decodeIfPresent(String.self, forKey: .color) ??  "#FF0000"
-        self.contrastColor = try container.decodeIfPresent(String.self, forKey: .contrastColor) ??  "#FFFFFF"
-        self.locale = try container.decodeIfPresent(String.self, forKey: .locale) ??  "en-US"
-        self.initialCoordinates = try container.decodeIfPresent(PlacePickerCoordinate.self, forKey: .initialCoordinates) ?? initialCoords
-        self.enableGeocoding = try container.decodeIfPresent(Bool.self, forKey: .enableGeocoding) ??  true
-        self.enableSearch = try container.decodeIfPresent(Bool.self, forKey: .enableSearch) ??  true
-        self.enableUserLocation = try container.decodeIfPresent(Bool.self, forKey: .enableUserLocation) ??  true
-        self.enableLargeTitle = try container.decodeIfPresent(Bool.self, forKey: .enableLargeTitle) ??  true
-        self.rejectOnCancel = try container.decodeIfPresent(Bool.self, forKey: .rejectOnCancel) ??  true
-    }
+struct PlacePickerOptions: Record {
+    @Field
+    var presentationStyle: PlacePickerPresentationStyle = .fullscreen
+    @Field
+    var title: String = "Choose Place"
+    @Field
+    var searchPlaceholder: String = "Search..."
+    @Field
+    var color: String = "FF0000"
+    @Field
+    var contrastColor: String = "FFFFFF"
+    @Field
+    var locale: String = "en-US"
+    @Field
+    var initialCoordinates: PlacePickerCoordinate = PlacePickerCoordinate(latitude: .init(wrappedValue: 25.2048), longitude: .init(wrappedValue: 55.2708))
+    @Field
+    var enableGeocoding: Bool = true
+    @Field
+    var enableSearch: Bool = true
+    @Field
+    var enableUserLocation: Bool = true
+    @Field
+    var enableLargeTitle: Bool = true
+    @Field
+    var rejectOnCancel: Bool = true
 }

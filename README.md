@@ -1,10 +1,8 @@
 # react-native-place-picker
 
-
-demo | demo video
-:-: | :-:
-![HEADER](HEADER.png) | <video src='https://github.com/b0iq/react-native-place-picker/assets/106549013/550551fd-5e25-40be-9b01-7698f4d48e2e' width=180/>
-
+|         demo          |                                                             demo video                                                             |
+| :-------------------: | :--------------------------------------------------------------------------------------------------------------------------------: |
+| ![HEADER](HEADER.png) | <video src='https://github.com/b0iq/react-native-place-picker/assets/106549013/550551fd-5e25-40be-9b01-7698f4d48e2e' width='180'/> |
 
   <p align="center">
       <a href="https://badge.fury.io/js/react-native-place-picker">
@@ -31,17 +29,17 @@ demo | demo video
 
 ### Features
 
-- [x] Theme customization.
-- [x] UI written natively.
-- [x] Location reverse-geocoding (coordinate -> address).
-- [x] Searchable (users can search for location).
-- [x] Device location.
-- [x] Fully configurable. 
-- [x] Supporting Turbo Modules (New Arch) with backward capability.
-- [x] Renders on top of the app (Blazing Fast).
-- [x] Well typed.
-- [x] Significantly small package.
-- [x] No peer depedancies except React and React-Native <sup>[[1]](#extra) </sup> 
+- [x] 🎨 Theme customization.
+- [x] 📱 UI written natively.
+- [x] 🗺️ Location reverse-geocoding (coordinate -> address).
+- [x] 🔍 Searchable (users can search for location).
+- [x] 📍 Device location.
+- [x] ⚙️ Fully configurable.
+- [x] 🏗️ Supporting Turbo Modules (New Arch) with backward compatibility.
+- [x] ⚡ Renders on top of the app (Blazing Fast).
+- [x] 📐 Well typed.
+- [x] 📦 Significantly small package.
+- [x] 🔗 No peer dependencies except React and React-Native <sup>[[1]](#extra)</sup>.
 
 ### How is it working?
 
@@ -53,13 +51,17 @@ demo | demo video
 npm install react-native-place-picker
 # or
 yarn add react-native-place-picker
+# or
+pnpm add react-native-place-picker
+# or
+bun add react-native-place-picker
 ```
 
 ### Expo
 
 - You need to add `expo-dev-client` and run `expo run:ios` or `expo run:android`
 
-> **Info** Expo managed app not yet supported 🚧
+> **Info** Expo managed app not supported 🚧
 
 ### iOS
 
@@ -80,17 +82,15 @@ yarn add react-native-place-picker
    android:value="YOUR_KEY" />
 ```
 
-## Usage
-# [Checkout the documentation](https://b0iq.github.io/react-native-place-picker)
 ### Request
 
 ```js
-import { pickPlace } from 'react-native-place-picker';
+import { pickPlace } from "react-native-place-picker";
 
 pickPlace({
   enableUserLocation: true,
   enableGeocoding: true,
-  color: '#FF00FF',
+  color: "#FF00FF",
   //...etc
 })
   .then(console.log)
@@ -123,6 +123,56 @@ pickPlace().then(console.log).catch(console.log);
 
 ```
 
+### PlacePickerOptions
+
+| Property             | Type                                     | Description                                                                           | Default                                     |
+| -------------------- | ---------------------------------------- | ------------------------------------------------------------------------------------- | ------------------------------------------- |
+| `presentationStyle`  | `PlacePickerPresentationStyle` \| string | Presentation style of the place picker window. **iOS only**                           | `'fullscreen'`                              |
+| `title`              | `string`                                 | The title of the place picker window.                                                 | `'Choose Place'`                            |
+| `searchPlaceholder`  | `string`                                 | Placeholder for the search bar in the place picker window.                            | `'Search...'`                               |
+| `color`              | `string`                                 | Primary color of the theme (map pin, shadow, etc.).                                   | `'#FF0000'`                                 |
+| `contrastColor`      | `string`                                 | Contrast color for the primary color.                                                 | `'#FFFFFF'`                                 |
+| `locale`             | `string`                                 | Locale for the returned address.                                                      | `'en-US'`                                   |
+| `initialCoordinates` | `PlacePickerCoordinate`                  | Initial map position.                                                                 | `{ latitude: 25.2048, longitude: 55.2708 }` |
+| `enableGeocoding`    | `boolean`                                | geocoding for the selected address.                                                   | `true`                                      |
+| `enableSearch`       | `boolean`                                | search bar for searching specific positions.                                          | `true`                                      |
+| `enableUserLocation` | `boolean`                                | current user position button. Requires setup.                                         | `true`                                      |
+| `enableLargeTitle`   | `boolean`                                | large navigation bar title of the UIViewController. **iOS only**                      | `true`                                      |
+| `rejectOnCancel`     | `boolean`                                | Reject and return nothing if the user dismisses the window without selecting a place. | `true`                                      |
+
+### PlacePickerPresentationStyle
+
+| Enum Value   | Description                            |
+| ------------ | -------------------------------------- |
+| `modal`      | Presentation style as a modal window.  |
+| `fullscreen` | Presentation style in fullscreen mode. |
+
+### PlacePickerAddress
+
+| Property     | Type     | Description                 |
+| ------------ | -------- | --------------------------- |
+| `name`       | `string` | Name of the location.       |
+| `streetName` | `string` | Street name of the address. |
+| `city`       | `string` | City of the address.        |
+| `state`      | `string` | State of the address.       |
+| `zipCode`    | `string` | Zip code of the address.    |
+| `country`    | `string` | Country of the address.     |
+
+### PlacePickerCoordinate
+
+| Property    | Type     | Description                |
+| ----------- | -------- | -------------------------- |
+| `latitude`  | `number` | Latitude of the location.  |
+| `longitude` | `number` | Longitude of the location. |
+
+### PlacePickerResults
+
+| Property     | Type                    | Description                                                    |
+| ------------ | ----------------------- | -------------------------------------------------------------- |
+| `coordinate` | `PlacePickerCoordinate` | Selected coordinate.                                           |
+| `address`    | `PlacePickerAddress`    | Geocoded address for selected location (if `enableGeocoding`). |
+| `didCancel`  | `boolean`               | Indicates if the place picker was canceled without selecting.  |
+
 ## Contributing
 
 See the [contributing guide](CONTRIBUTING.md) to learn how to contribute to the repository and the development workflow.
@@ -130,6 +180,3 @@ See the [contributing guide](CONTRIBUTING.md) to learn how to contribute to the 
 ## License
 
 MIT
-
-## Extra
-[1] The only liberary is used: Kotlin object parsing liberary `com.fasterxml.jackson.module:jackson-module-kotlin:2.14.+` to parse Javascript parameters easily.

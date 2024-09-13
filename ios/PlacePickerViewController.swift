@@ -8,10 +8,11 @@
 
 import UIKit
 import MapKit
+import ExpoModulesCore
+
 class PlacePickerViewController: UIViewController {
     // MARK: - Variables
-    private var resolver: RCTPromiseResolveBlock?
-    private var rejector: RCTPromiseRejectBlock?
+    private var promise: Promise?
     private let options: PlacePickerOptions
     private let searchController = UISearchController()
     private let completer = MKLocalSearchCompleter()
@@ -28,9 +29,8 @@ class PlacePickerViewController: UIViewController {
     private let locationManager = CLLocationManager()
     
     // MARK: - Inits
-    init(_ resolver: @escaping RCTPromiseResolveBlock, _ rejector: @escaping RCTPromiseRejectBlock, _ options: PlacePickerOptions) {
-        self.resolver = resolver
-        self.rejector = rejector
+    init(_ options: PlacePickerOptions,_ promise: Promise) {
+        self.promise = promise
         self.options = options
         super.init(nibName: nil, bundle: nil)
     }
@@ -184,7 +184,7 @@ class PlacePickerViewController: UIViewController {
             customCancelButton.configuration = .borderedProminent()
             customUserLocationButton.configuration = .bordered()
         }
-
+        
         let customCancelButtonItem = UIBarButtonItem(customView: customCancelButton)
         let customDoneButtonItem = UIBarButtonItem(customView: customDoneButton)
         let customUserLocationButtonItem = UIBarButtonItem(customView: customUserLocationButton)
@@ -200,7 +200,7 @@ class PlacePickerViewController: UIViewController {
             searchController.searchBar.placeholder = options.searchPlaceholder
             searchController.searchBar.enablesReturnKeyAutomatically = true
             searchController.searchBar.returnKeyType = .search
-           
+            
             searchController.searchResultsUpdater = self
             searchController.searchBar.delegate = self
             searchController.obscuresBackgroundDuringPresentation = false
@@ -257,8 +257,8 @@ class PlacePickerViewController: UIViewController {
         }
     }
     override func viewDidDisappear(_ animated: Bool) {
-        if (rejector != nil) {
-            rejector!("dismissed", "Modal closed by user", NSError(domain: "pickerView", code: 11))
+        if (promise != nil && options.rejectOnCancel) {
+            promise?.reject("dismissed", "Modal closed by user")
         }
     }
     
@@ -268,38 +268,31 @@ class PlacePickerViewController: UIViewController {
     }
     @objc private func closePicker() {
         if (options.rejectOnCancel) {
-            if (rejector != nil) {
-                rejector!("cancel", "User cancel the operation and `rejectOnCancel` is enabled", NSError(domain: "pickerView", code: 13))
-                rejector = nil
-                resolver = nil
-                DispatchQueue.main.async {
-                    self.dismiss(animated: true)
-                }
+            if (promise != nil) {
+                promise?.reject("cancel", "User cancel the operation and `rejectOnCancel` is enabled")
             }
-            return
+        } else {
+            let result = PlacePickerResult(
+                coordinate: .init(wrappedValue:  PlacePickerCoordinate(latitude: .init(wrappedValue: mapView.centerCoordinate.latitude), longitude: .init(wrappedValue: mapView.centerCoordinate.longitude))),
+                address: .init(wrappedValue: PlacePickerAddress(with: self.lastLocation)),
+                didCancel: .init(wrappedValue: true))
+            promise?.resolve(result)
         }
-        resolver?(try? PlacePickerResult(
-            coordinate: PlacePickerCoordinate(latitude: mapView.centerCoordinate.latitude, longitude: mapView.centerCoordinate.longitude),
-            address: PlacePickerAddress(with: self.lastLocation),
-            didCancel: true).asDictionary())
-        resolver = nil
-        rejector = nil
-        
-        self.dismiss(animated: true)
+        promise = nil
+        DispatchQueue.main.async {
+            self.dismiss(animated: true)
+        }
     }
     @objc private func finalizePicker() {
-        do {
-            let result = try PlacePickerResult(
-                coordinate: PlacePickerCoordinate(latitude: mapView.centerCoordinate.latitude, longitude: mapView.centerCoordinate.longitude),
-                address: PlacePickerAddress(with: self.lastLocation),
-                didCancel: false).asDictionary()
-            resolver?(result)
-        } catch {
-            
+        let result = PlacePickerResult(
+            coordinate: .init(wrappedValue:  PlacePickerCoordinate(latitude: .init(wrappedValue: mapView.centerCoordinate.latitude), longitude: .init(wrappedValue: mapView.centerCoordinate.longitude))),
+            address: .init(wrappedValue: PlacePickerAddress(with: self.lastLocation)),
+            didCancel: .init(wrappedValue: false))
+        promise?.resolve(result)
+        promise = nil
+        DispatchQueue.main.async {
+            self.dismiss(animated: true)
         }
-        rejector = nil
-        resolver = nil
-        self.dismiss(animated: true)
     }
     
     // MARK: - Private methods
@@ -387,7 +380,7 @@ extension PlacePickerViewController: UISearchBarDelegate {
         return true
     }
     func searchBarSearchButtonClicked(_ searchBar: UISearchBar) {
-//        print("DID SEARCH")
+        //        print("DID SEARCH")
     }
 }
 extension PlacePickerViewController: CLLocationManagerDelegate {

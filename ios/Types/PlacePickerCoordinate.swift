@@ -5,8 +5,11 @@
 //  Created by b0iq on 10/11/2022.
 //
 
-import Foundation
+import ExpoModulesCore
 
-struct PlacePickerCoordinate: Codable {
-    let latitude, longitude: Double
+struct PlacePickerCoordinate: Record {
+    @Field
+    var latitude: Double
+    @Field
+    var longitude: Double
 }
