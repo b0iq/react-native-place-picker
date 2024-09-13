@@ -1,0 +1,9 @@
+{
+  "platforms": ["ios", "tvos", "android", "web"],
+  "ios": {
+    "modules": ["ReactNativePlacePickerModule"]
+  },
+  "android": {
+    "modules": ["expo.modules.placepicker.ReactNativePlacePickerModule"]
+  }
+}

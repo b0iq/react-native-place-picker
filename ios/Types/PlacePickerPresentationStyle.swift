@@ -5,8 +5,8 @@
 //  Created by b0iq on 11/11/2022.
 //
 
-import Foundation
+import ExpoModulesCore
 
-enum PlacePickerPresentationStyle: String, Codable {
+enum PlacePickerPresentationStyle: String, Enumerable {
     case modal, fullscreen
 }

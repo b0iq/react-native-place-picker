@@ -5,10 +5,13 @@
 //  Created by b0iq on 11/11/2022.
 //
 
-import Foundation
+import ExpoModulesCore
 
-struct PlacePickerResult: Codable {
-    let coordinate: PlacePickerCoordinate
-    let address: PlacePickerAddress?
-    let didCancel: Bool
+struct PlacePickerResult: Record {
+    @Field
+    var coordinate: PlacePickerCoordinate
+    @Field
+    var address: PlacePickerAddress?
+    @Field
+    var didCancel: Bool
 }

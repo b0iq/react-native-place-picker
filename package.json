@@ -1,164 +1,43 @@
 {
   "name": "react-native-place-picker",
-  "version": "2.7.0",
-  "description": "Pick any place with single click 🚀",
-  "main": "lib/commonjs/index",
-  "module": "lib/module/index",
-  "types": "lib/typescript/index.d.ts",
-  "react-native": "src/index",
-  "source": "src/index",
-  "files": [
-    "src",
-    "lib",
-    "android",
-    "ios",
-    "cpp",
-    "*.podspec",
-    "!lib/typescript/example",
-    "!ios/build",
-    "!android/build",
-    "!android/gradle",
-    "!android/gradlew",
-    "!android/gradlew.bat",
-    "!android/local.properties",
-    "!**/__tests__",
-    "!**/__fixtures__",
-    "!**/__mocks__",
-    "!**/.*"
-  ],
+  "version": "3.0.0",
+  "description": "Pick place with single click",
+  "main": "build/index.js",
+  "types": "build/index.d.ts",
   "scripts": {
-    "test": "jest",
-    "typecheck": "tsc --noEmit",
-    "lint": "eslint \"**/*.{js,ts,tsx}\"",
-    "prepack": "bob build",
-    "release": "release-it",
-    "example": "yarn --cwd example",
-    "build:android": "cd example/android && ./gradlew assembleDebug --no-daemon --console=plain -PreactNativeArchitectures=arm64-v8a",
-    "build:ios": "cd example/ios && xcodebuild -workspace PlacePickerExample.xcworkspace -scheme PlacePickerExample -configuration Debug -sdk iphonesimulator CC=clang CPLUSPLUS=clang++ LD=clang LDPLUSPLUS=clang++ GCC_OPTIMIZATION_LEVEL=0 GCC_PRECOMPILE_PREFIX_HEADER=YES ASSETCATALOG_COMPILER_OPTIMIZATION=time DEBUG_INFORMATION_FORMAT=dwarf COMPILER_INDEX_STORE_ENABLE=NO",
-    "bootstrap": "yarn example && yarn install && yarn example pods",
-    "clean": "del-cli android/build example/android/build example/android/app/build example/ios/build"
+    "build": "expo-module build",
+    "clean": "expo-module clean",
+    "lint": "expo-module lint",
+    "test": "expo-module test",
+    "prepare": "expo-module prepare",
+    "prepublishOnly": "expo-module prepublishOnly",
+    "expo-module": "expo-module",
+    "open:ios": "xed example/ios",
+    "open:android": "open -a \"Android Studio\" example/android"
   },
   "keywords": [
     "react-native",
-    "ios",
-    "android"
+    "expo",
+    "react-native-place-picker",
+    "ReactNativePlacePicker"
   ],
   "repository": "https://github.com/b0iq/react-native-place-picker",
-  "author": "b0iq <contact@b0iq.com> (https://github.com/b0iq)",
-  "license": "MIT",
   "bugs": {
     "url": "https://github.com/b0iq/react-native-place-picker/issues"
   },
+  "author": "b0iq <contact@b0iq.com> (https://github.com/b0iq)",
+  "license": "MIT",
   "homepage": "https://github.com/b0iq/react-native-place-picker#readme",
-  "publishConfig": {
-    "registry": "https://registry.npmjs.org/"
-  },
+  "dependencies": {},
   "devDependencies": {
-    "@commitlint/config-conventional": "^17.0.2",
-    "@evilmartians/lefthook": "^1.2.2",
-    "@react-native-community/eslint-config": "^3.0.2",
-    "@release-it/conventional-changelog": "^5.0.0",
-    "@types/jest": "^28.1.2",
-    "@types/react": "~17.0.21",
-    "@types/react-native": "0.70.0",
-    "commitlint": "^17.0.2",
-    "del-cli": "^5.0.0",
-    "eslint": "^8.4.1",
-    "eslint-config-prettier": "^8.5.0",
-    "eslint-plugin-prettier": "^4.0.0",
-    "jest": "^28.1.1",
-    "pod-install": "^0.1.0",
-    "prettier": "^2.0.5",
-    "react": "18.2.0",
-    "react-native": "0.72.1",
-    "react-native-builder-bob": "^0.20.0",
-    "release-it": "^15.0.0",
-    "turbo": "^1.10.7",
-    "typescript": "^5.0.2"
-  },
-  "resolutions": {
-    "@types/react": "17.0.21"
+    "@types/react": "^18.0.25",
+    "expo-module-scripts": "^3.5.2",
+    "expo-modules-core": "^1.12.20"
   },
   "peerDependencies": {
+    "expo": "*",
     "react": "*",
     "react-native": "*"
   },
-  "jest": {
-    "preset": "react-native",
-    "modulePathIgnorePatterns": [
-      "<rootDir>/example/node_modules",
-      "<rootDir>/lib/"
-    ]
-  },
-  "commitlint": {
-    "extends": [
-      "@commitlint/config-conventional"
-    ]
-  },
-  "release-it": {
-    "git": {
-      "commitMessage": "chore: release ${version}",
-      "tagName": "v${version}"
-    },
-    "npm": {
-      "publish": true
-    },
-    "github": {
-      "release": true
-    },
-    "plugins": {
-      "@release-it/conventional-changelog": {
-        "preset": "angular"
-      }
-    }
-  },
-  "eslintConfig": {
-    "root": true,
-    "extends": [
-      "@react-native-community",
-      "prettier"
-    ],
-    "rules": {
-      "prettier/prettier": [
-        "error",
-        {
-          "quoteProps": "consistent",
-          "singleQuote": true,
-          "tabWidth": 2,
-          "trailingComma": "es5",
-          "useTabs": false
-        }
-      ]
-    }
-  },
-  "eslintIgnore": [
-    "node_modules/",
-    "lib/"
-  ],
-  "prettier": {
-    "quoteProps": "consistent",
-    "singleQuote": true,
-    "tabWidth": 2,
-    "trailingComma": "es5",
-    "useTabs": false
-  },
-  "react-native-builder-bob": {
-    "source": "src",
-    "output": "lib",
-    "targets": [
-      "commonjs",
-      "module",
-      [
-        "typescript",
-        {
-          "project": "tsconfig.build.json"
-        }
-      ]
-    ]
-  },
-  "codegenConfig": {
-    "name": "RNPlacePickerSpec",
-    "type": "modules",
-    "jsSrcsDir": "src"
-  }
+  "packageManager": "yarn@1.22.1+sha512.84bec57763ecbf87ce884fc98d550b0e0f8b7241b4425ec83d4879c160bfe1412be96f9e17e5551167d1bba43ba9b3a7aa4efea98ec25d84922c17c92321255c"
 }

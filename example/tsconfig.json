@@ -1,0 +1,10 @@
+{
+  "extends": "expo/tsconfig.base",
+  "compilerOptions": {
+    "strict": true,
+    "paths": {
+      "react-native-place-picker": ["../src/index"],
+      "react-native-place-picker/*": ["../src/*"]
+    }
+  }
+}
