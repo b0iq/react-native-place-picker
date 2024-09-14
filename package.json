@@ -1,6 +1,6 @@
 {
   "name": "react-native-place-picker",
-  "version": "3.0.0",
+  "version": "3.0.1",
   "description": "Pick place with single click",
   "main": "build/index.js",
   "types": "build/index.d.ts",

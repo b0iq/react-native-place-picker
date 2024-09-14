@@ -1,11 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="expo.modules.placepicker">
 
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <application>
         <activity
             android:name=".PlacePickerActivity"
-            android:exported="false" />
+            android:exported="false"
+            android:theme="@style/Theme.PlacePickerTheme"
+            />
     </application>
 
 </manifest>
