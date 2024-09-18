@@ -30,14 +30,14 @@
   "homepage": "https://github.com/b0iq/react-native-place-picker#readme",
   "dependencies": {},
   "devDependencies": {
-    "@types/react": "^18.0.25",
+    "@types/react": "^18.3.7",
     "expo-module-scripts": "^3.5.2",
-    "expo-modules-core": "^1.12.20"
+    "expo-modules-core": "^1.12.24"
   },
   "peerDependencies": {
     "expo": "*",
     "react": "*",
     "react-native": "*"
   },
-  "packageManager": "yarn@1.22.1+sha512.84bec57763ecbf87ce884fc98d550b0e0f8b7241b4425ec83d4879c160bfe1412be96f9e17e5551167d1bba43ba9b3a7aa4efea98ec25d84922c17c92321255c"
+  "packageManager": "yarn@1.22.22"
 }
