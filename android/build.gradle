@@ -1,7 +1,7 @@
 apply plugin: 'com.android.library'
 
 group = 'expo.modules.placepicker'
-version = '3.0.6'
+version = '3.0.7'
 
 def expoModulesCorePlugin = new File(project(":expo-modules-core").projectDir.absolutePath, "ExpoModulesCorePlugin.gradle")
 apply from: expoModulesCorePlugin
@@ -35,8 +35,8 @@ if (useManagedAndroidSdkVersions) {
 android {
     namespace "expo.modules.placepicker"
     defaultConfig {
-        versionCode 3000006
-        versionName "3.0.6"
+        versionCode 3000007
+        versionName "3.0.7"
     }
     lintOptions {
         abortOnError false
