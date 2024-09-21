@@ -17,6 +17,7 @@ import android.widget.SearchView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
+import androidx.core.view.WindowCompat
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.maps.CameraUpdateFactory
@@ -51,17 +52,18 @@ class PlacePickerActivity : AppCompatActivity(), OnMapReadyCallback,
         super.onCreate(savedInstanceState)
         setUpMapLocale()
         setContentView(R.layout.activity_place_picker)
-        val toolbar = findViewById<androidx.appcompat.widget.Toolbar>(R.id.toolbar)
-        setSupportActionBar(toolbar)
-//        WindowCompat.setDecorFitsSystemWindows(window, false)
+        if (supportActionBar == null) {
+            val toolbar = findViewById<androidx.appcompat.widget.Toolbar>(R.id.toolbar)
+            setSupportActionBar(toolbar)
+        }
+        WindowCompat.setDecorFitsSystemWindows(window, false)
         gatherViews()
         geocoder =
             Geocoder(
-                applicationContext,
-                Locale.forLanguageTag(PlacePickerState.globalOptions.locale) ?: Locale.getDefault()
+                applicationContext, Locale.forLanguageTag(PlacePickerState.globalOptions.locale) ?: Locale.getDefault()
             )
         this.title = PlacePickerState.globalOptions.title
-//        supportActionBar?.subtitle = ""
+        supportActionBar?.subtitle = ""
     }
 
     private fun gatherViews() {
