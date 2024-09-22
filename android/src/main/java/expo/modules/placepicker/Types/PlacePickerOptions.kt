@@ -14,10 +14,10 @@ class PlacePickerOptions : Record {
     val searchPlaceholder: String = "Search..."
 
     @Field
-    val color: String = "FF0000"
+    val color: String = "#FF0000"
 
     @Field
-    val contrastColor: String = "FFFFFF"
+    val contrastColor: String = "#FFFFFF"
 
     @Field
     val locale: String = "en-US"
