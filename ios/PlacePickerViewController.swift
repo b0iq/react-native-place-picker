@@ -13,8 +13,6 @@ class PlacePickerViewController: UIViewController {
     // MARK: - Variables
     private var promise: Promise?
     private let options: PlacePickerOptions
-    private let searchController = UISearchController()
-    private let completer = MKLocalSearchCompleter()
     private var completerResults: [CustomSearchCompletion] = [] {
         didSet {
             searchResultContainer.dataSource = completerResults
@@ -26,6 +24,7 @@ class PlacePickerViewController: UIViewController {
     private var mapMoveDebounceTimer: Timer?
     private let geocoder = CLGeocoder()
     private let locationManager = CLLocationManager()
+    private let completer = MKLocalSearchCompleter()
 
     // MARK: - Inits
     init(_ options: PlacePickerOptions, _ promise: Promise) {
@@ -33,11 +32,34 @@ class PlacePickerViewController: UIViewController {
         self.options = options
         super.init(nibName: nil, bundle: nil)
     }
+
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
 
     // MARK: - UI Views
+    private lazy var customSearchBar: UISearchBar = {
+        let searchBar = UISearchBar()
+        searchBar.placeholder = options.searchPlaceholder
+        searchBar.barTintColor = .white
+        searchBar.backgroundImage = UIImage()
+        searchBar.layer.cornerRadius = 12
+        searchBar.layer.masksToBounds = true
+        searchBar.searchBarStyle = .minimal
+        searchBar.tintColor = UIColor(options.color)
+        searchBar.setBackgroundImage(UIImage(), for: .any, barMetrics: .default)
+        searchBar.translatesAutoresizingMaskIntoConstraints = false
+
+        // Add shadow
+        searchBar.layer.shadowColor = UIColor.black.cgColor
+        searchBar.layer.shadowOffset = CGSize(width: 0, height: 2)
+        searchBar.layer.shadowRadius = 4
+        searchBar.layer.shadowOpacity = 0.1
+        searchBar.delegate = self
+
+        return searchBar
+    }()
+
     private lazy var mapPinShadow: UIView = {
         let shadowView = UIView()
         shadowView.backgroundColor = UIColor(options.color).withAlphaComponent(0.3)
@@ -50,65 +72,11 @@ class PlacePickerViewController: UIViewController {
         return shadowView
     }()
 
-    private lazy var pinImage: UIView = {
-        let pinImage: UIImageView
-        if #available(iOS 13.0, *) {
-            pinImage = UIImageView(image: UIImage(systemName: "mappin.circle.fill"))
-        } else {
-            pinImage = UIImageView(image: UIImage(named: "mappin"))
-        }
-        pinImage.contentMode = .scaleAspectFit
-        pinImage.tintColor = UIColor(options.contrastColor)
-        pinImage.frame = CGRect(x: 0, y: 0, width: 30, height: 30)
-        return pinImage
-    }()
-
     private lazy var pinLoading: UIActivityIndicatorView = {
         let loader = UIActivityIndicatorView(frame: CGRect(x: 0, y: 0, width: 30, height: 30))
         loader.color = UIColor(options.contrastColor)
         loader.hidesWhenStopped = true
         return loader
-    }()
-
-    private lazy var mapPinContentView: UIView = {
-        let pinContainer = UIView(frame: CGRect(x: 0, y: 0, width: 40, height: 40))
-        pinContainer.layer.cornerRadius = 20
-        pinContainer.backgroundColor = UIColor(options.color)
-        pinContainer.layer.shadowColor = UIColor.black.cgColor
-        pinContainer.layer.shadowOpacity = 0.2
-        pinContainer.layer.shadowOffset = CGSize(width: 0, height: 2)
-        pinContainer.layer.shadowRadius = 4
-        pinContainer.addSubview(pinImage)
-        pinContainer.addSubview(pinLoading)
-
-        // Center the pin image and loading indicator
-        pinImage.center = CGPoint(
-            x: pinContainer.bounds.width / 2, y: pinContainer.bounds.height / 2)
-        pinLoading.center = CGPoint(
-            x: pinContainer.bounds.width / 2, y: pinContainer.bounds.height / 2)
-
-        return pinContainer
-    }()
-
-    private lazy var mapPin: UIView = {
-        let pinView = UIView()
-
-        // Create a custom pin shape using bezier path
-        let pinTailPath = UIBezierPath()
-        pinTailPath.move(to: CGPoint(x: 20, y: 40))
-        pinTailPath.addLine(to: CGPoint(x: 16, y: 46))
-        pinTailPath.addLine(to: CGPoint(x: 24, y: 46))
-        pinTailPath.close()
-
-        let tailShape = CAShapeLayer()
-        tailShape.path = pinTailPath.cgPath
-        tailShape.fillColor = UIColor(options.color).cgColor
-
-        pinView.layer.insertSublayer(tailShape, at: 0)
-        pinView.addSubview(mapPinContentView)
-        pinView.translatesAutoresizingMaskIntoConstraints = false
-
-        return pinView
     }()
 
     private lazy var mapView: MKMapView = {
@@ -145,186 +113,178 @@ class PlacePickerViewController: UIViewController {
         return view
     }()
 
+    private lazy var closeButton: UIButton = {
+        let button = UIButton(type: .system)
+        button.setTitle("Cancel", for: .normal)
+        if #available(iOS 13.0, *) {
+            let cancelImage = UIImage(systemName: "xmark.circle.fill")
+            button.setImage(cancelImage, for: .normal)
+            button.imageEdgeInsets = UIEdgeInsets(top: 0, left: 0, bottom: 0, right: 8)
+        }
+        button.setTitleColor(UIColor(options.color), for: .normal)
+        button.backgroundColor = UIColor(options.contrastColor).withAlphaComponent(0.1)
+        button.layer.cornerRadius = 12
+        button.layer.shadowColor = UIColor.black.cgColor
+        button.layer.shadowOpacity = 0.1
+        button.layer.shadowOffset = CGSize(width: 0, height: 1)
+        button.layer.shadowRadius = 3
+        button.contentEdgeInsets = UIEdgeInsets(top: 8, left: 16, bottom: 8, right: 16)
+        button.translatesAutoresizingMaskIntoConstraints = false
+        button.addTarget(self, action: #selector(closePicker), for: .touchUpInside)
+        return button
+    }()
+
+    private lazy var doneButton: UIButton = {
+        let button = UIButton(type: .system)
+        button.setTitle("Done", for: .normal)
+        if #available(iOS 13.0, *) {
+            let doneImage = UIImage(systemName: "checkmark")
+            button.setImage(doneImage, for: .normal)
+            button.imageEdgeInsets = UIEdgeInsets(top: 0, left: 0, bottom: 0, right: 8)
+        }
+        button.setTitleColor(UIColor.white, for: .normal)
+        button.backgroundColor = UIColor(options.color)
+        button.layer.cornerRadius = 12
+        button.layer.shadowColor = UIColor.black.cgColor
+        button.layer.shadowOpacity = 0.2
+        button.layer.shadowOffset = CGSize(width: 0, height: 2)
+        button.layer.shadowRadius = 4
+        button.contentEdgeInsets = UIEdgeInsets(top: 8, left: 16, bottom: 8, right: 16)
+        button.translatesAutoresizingMaskIntoConstraints = false
+        button.addTarget(self, action: #selector(finalizePicker), for: .touchUpInside)
+        return button
+    }()
+
+    private lazy var locationButton: UIButton = {
+        let button = UIButton(type: .system)
+        if #available(iOS 13.0, *) {
+            let locationImage = UIImage(systemName: "location.circle.fill")
+            button.setImage(locationImage, for: .normal)
+        } else {
+            button.setTitle("My Location", for: .normal)
+        }
+        button.setTitleColor(UIColor(options.color), for: .normal)
+        button.tintColor = UIColor(options.color)
+        button.backgroundColor = UIColor.white
+        button.layer.cornerRadius = 12
+        button.layer.shadowColor = UIColor.black.cgColor
+        button.layer.shadowOpacity = 0.2
+        button.layer.shadowOffset = CGSize(width: 0, height: 2)
+        button.layer.shadowRadius = 4
+        button.contentEdgeInsets = UIEdgeInsets(top: 12, left: 12, bottom: 12, right: 12)
+        button.translatesAutoresizingMaskIntoConstraints = false
+        button.addTarget(self, action: #selector(pickUserLocation), for: .touchUpInside)
+        return button
+    }()
+
     // MARK: - UI setup methods
     private func setupViews() {
         // Set view background color
         self.view.backgroundColor = .white
 
-        // MARK: - 1 Setup map view
+        // MARK: - 1 Setup map view and default Apple pin
         self.view.addSubview(mapView)
         NSLayoutConstraint.activate([
-            mapView.widthAnchor.constraint(equalTo: self.view.widthAnchor),
-            mapView.heightAnchor.constraint(equalTo: self.view.heightAnchor),
+            mapView.topAnchor.constraint(equalTo: self.view.topAnchor),
+            mapView.bottomAnchor.constraint(equalTo: self.view.bottomAnchor),
+            mapView.leadingAnchor.constraint(equalTo: self.view.leadingAnchor),
+            mapView.trailingAnchor.constraint(equalTo: self.view.trailingAnchor),
         ])
 
-        self.view.addSubview(mapPinShadow)
+        // Add title label
+        let titleLabel = UILabel()
+        titleLabel.text = options.title
+        titleLabel.font = UIFont.boldSystemFont(ofSize: 20)
+        titleLabel.textAlignment = .center
+        titleLabel.translatesAutoresizingMaskIntoConstraints = false
+        self.view.addSubview(titleLabel)
+
         NSLayoutConstraint.activate([
-            mapPinShadow.centerXAnchor.constraint(equalTo: self.view.centerXAnchor),
-            mapPinShadow.centerYAnchor.constraint(
-                equalTo: self.view.safeAreaLayoutGuide.centerYAnchor),
-            mapPinShadow.widthAnchor.constraint(equalToConstant: 8),
-            mapPinShadow.heightAnchor.constraint(equalToConstant: 8),
+            titleLabel.topAnchor.constraint(
+                equalTo: self.view.safeAreaLayoutGuide.topAnchor, constant: 16),
+            titleLabel.leadingAnchor.constraint(equalTo: self.view.leadingAnchor, constant: 16),
+            titleLabel.trailingAnchor.constraint(equalTo: self.view.trailingAnchor, constant: -16),
         ])
 
-        mapPin.setAnchorPoint(CGPoint(x: 0.5, y: 1))
-        self.view.addSubview(mapPin)
+        // Add custom search bar
+        self.view.addSubview(customSearchBar)
         NSLayoutConstraint.activate([
-            mapPin.centerXAnchor.constraint(equalTo: self.mapView.centerXAnchor),
-            mapPin.bottomAnchor.constraint(
-                equalTo: self.view.safeAreaLayoutGuide.centerYAnchor, constant: 20),
-            mapPin.widthAnchor.constraint(equalToConstant: 50),
-            mapPin.heightAnchor.constraint(equalToConstant: 50),
+            customSearchBar.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 16),
+            customSearchBar.leadingAnchor.constraint(
+                equalTo: self.view.leadingAnchor, constant: 16),
+            customSearchBar.trailingAnchor.constraint(
+                equalTo: self.view.trailingAnchor, constant: -16),
+            customSearchBar.heightAnchor.constraint(equalToConstant: 44),
         ])
 
         self.view.addSubview(searchResultContainer)
         NSLayoutConstraint.activate([
-            searchResultContainer.widthAnchor.constraint(
-                equalTo: self.view.widthAnchor, constant: -32),
-            searchResultContainer.centerXAnchor.constraint(equalTo: self.view.centerXAnchor),
             searchResultContainer.topAnchor.constraint(
-                equalTo: self.view.safeAreaLayoutGuide.topAnchor, constant: 56),
-            searchResultContainer.bottomAnchor.constraint(
-                lessThanOrEqualTo: self.view.bottomAnchor, constant: -100),
+                equalTo: customSearchBar.bottomAnchor, constant: 8),
+            searchResultContainer.leadingAnchor.constraint(
+                equalTo: self.view.leadingAnchor, constant: 16),
+            searchResultContainer.trailingAnchor.constraint(
+                equalTo: self.view.trailingAnchor, constant: -16),
+            searchResultContainer.heightAnchor.constraint(lessThanOrEqualToConstant: 220),
         ])
 
         searchResultContainer.delegate = self
 
-        // MARK: - 2 Setup navigation bar
-        setupNavigationBar()
-    }
+        // Add buttons
+        self.view.addSubview(closeButton)
+        self.view.addSubview(doneButton)
 
-    private func setupNavigationBar() {
-        // MARK: - 1 Make cancel button
-        let customCancelButton = UIButton(type: .system)
-        customCancelButton.tintColor = UIColor(options.color)
-        customCancelButton.layer.cornerRadius = 8
-        customCancelButton.backgroundColor = UIColor(options.contrastColor).withAlphaComponent(0.1)
-        customCancelButton.contentEdgeInsets = UIEdgeInsets(top: 8, left: 12, bottom: 8, right: 12)
+        NSLayoutConstraint.activate([
+            closeButton.leadingAnchor.constraint(equalTo: self.view.leadingAnchor, constant: 16),
+            closeButton.bottomAnchor.constraint(
+                equalTo: self.view.safeAreaLayoutGuide.bottomAnchor, constant: -16),
 
-        if #available(iOS 13.0, *) {
-            let cancelImage = UIImage(
-                systemName: "xmark.circle.fill",
-                withConfiguration: UIImage.SymbolConfiguration(pointSize: 16, weight: .semibold))
-            customCancelButton.setImage(cancelImage, for: .normal)
-        } else {
-            customCancelButton.setTitle("Cancel", for: .normal)
-        }
-        customCancelButton.addTarget(self, action: #selector(closePicker), for: .touchUpInside)
+            doneButton.trailingAnchor.constraint(equalTo: self.view.trailingAnchor, constant: -16),
+            doneButton.bottomAnchor.constraint(
+                equalTo: self.view.safeAreaLayoutGuide.bottomAnchor, constant: -16),
+        ])
 
-        // MARK: - 2 Make done button
-        let customDoneButton = UIButton(type: .system)
-        customDoneButton.tintColor = .white
-        customDoneButton.backgroundColor = UIColor(options.color)
-        customDoneButton.layer.cornerRadius = 8
-        customDoneButton.contentEdgeInsets = UIEdgeInsets(top: 8, left: 12, bottom: 8, right: 12)
-
-        if #available(iOS 13.0, *) {
-            let checkImage = UIImage(
-                systemName: "checkmark",
-                withConfiguration: UIImage.SymbolConfiguration(pointSize: 16, weight: .semibold))
-            customDoneButton.setImage(checkImage, for: .normal)
-            customDoneButton.setTitle(" Done", for: .normal)
-        } else {
-            customDoneButton.setTitle("Done", for: .normal)
-        }
-        customDoneButton.addTarget(self, action: #selector(finalizePicker), for: .touchUpInside)
-
-        // MARK: - 3 Make user location button
-        let customUserLocationButton = UIButton(type: .system)
-        customUserLocationButton.tintColor = UIColor(options.color)
-        customUserLocationButton.backgroundColor = UIColor(options.contrastColor)
-            .withAlphaComponent(0.1)
-        customUserLocationButton.layer.cornerRadius = 8
-        customUserLocationButton.contentEdgeInsets = UIEdgeInsets(
-            top: 8, left: 12, bottom: 8, right: 12)
-
-        if #available(iOS 13.0, *) {
-            let locationImage = UIImage(
-                systemName: "location.circle.fill",
-                withConfiguration: UIImage.SymbolConfiguration(pointSize: 16, weight: .semibold))
-            customUserLocationButton.setImage(locationImage, for: .normal)
-        } else {
-            customUserLocationButton.setTitle("location", for: .normal)
-        }
-        customUserLocationButton.addTarget(
-            self, action: #selector(pickUserLocation), for: .touchUpInside)
-
-        let customCancelButtonItem = UIBarButtonItem(customView: customCancelButton)
-        let customDoneButtonItem = UIBarButtonItem(customView: customDoneButton)
-        let customUserLocationButtonItem = UIBarButtonItem(customView: customUserLocationButton)
-
-        if options.enableSearch {
-            if #available(iOS 13.0, *) {
-                searchController.automaticallyShowsCancelButton = true
-                searchController.searchBar.searchTextField.clearButtonMode = .whileEditing
-                searchController.searchBar.showsCancelButton = false
-                searchController.searchBar.searchTextField.backgroundColor = UIColor.systemGray6
-                searchController.searchBar.tintColor = UIColor(options.color)
-            } else {
-                searchController.searchBar.setValue("OK", forKey: "cancelButtonText")
-            }
-            searchController.searchBar.placeholder = options.searchPlaceholder
-            searchController.searchBar.enablesReturnKeyAutomatically = true
-            searchController.searchBar.returnKeyType = .search
-
-            // Customize search bar appearance
-            searchController.searchBar.layer.cornerRadius = 10
-            searchController.searchBar.clipsToBounds = true
-
-            searchController.searchResultsUpdater = self
-            searchController.searchBar.delegate = self
-            searchController.obscuresBackgroundDuringPresentation = false
-            searchController.hidesNavigationBarDuringPresentation = false
-            navigationItem.hidesSearchBarWhenScrolling = false
-            definesPresentationContext = true
-            navigationItem.searchController = searchController
-        }
-
-        if options.enableLargeTitle {
-            self.navigationItem.largeTitleDisplayMode = .automatic
-            self.navigationController?.navigationBar.prefersLargeTitles = true
-        }
-        var rightItems = [customDoneButtonItem]
         if options.enableUserLocation {
-            rightItems.append(customUserLocationButtonItem)
+            self.view.addSubview(locationButton)
+            NSLayoutConstraint.activate([
+                locationButton.trailingAnchor.constraint(
+                    equalTo: self.view.trailingAnchor, constant: -16),
+                locationButton.topAnchor.constraint(
+                    equalTo: searchResultContainer.bottomAnchor, constant: 16),
+                locationButton.widthAnchor.constraint(equalToConstant: 44),
+                locationButton.heightAnchor.constraint(equalToConstant: 44),
+            ])
         }
-        self.navigationItem.leftBarButtonItem = customCancelButtonItem
-        self.navigationItem.rightBarButtonItems = rightItems
+
+        // Shadow under the pin
+        self.view.addSubview(mapPinShadow)
+        NSLayoutConstraint.activate([
+            mapPinShadow.centerXAnchor.constraint(equalTo: self.view.centerXAnchor),
+            mapPinShadow.centerYAnchor.constraint(equalTo: self.view.centerYAnchor),
+            mapPinShadow.widthAnchor.constraint(equalToConstant: 8),
+            mapPinShadow.heightAnchor.constraint(equalToConstant: 8),
+        ])
+
+        // Add loading indicator for pin
+        pinLoading.translatesAutoresizingMaskIntoConstraints = false
+        self.view.addSubview(pinLoading)
+        NSLayoutConstraint.activate([
+            pinLoading.centerXAnchor.constraint(equalTo: self.view.centerXAnchor),
+            pinLoading.centerYAnchor.constraint(equalTo: self.view.centerYAnchor, constant: -20),
+            pinLoading.widthAnchor.constraint(equalToConstant: 30),
+            pinLoading.heightAnchor.constraint(equalToConstant: 30),
+        ])
     }
 
     // MARK: - UIViewController Lifecycle
-    override func viewWillAppear(_ animated: Bool) {
-        if #available(iOS 13, *) {
-            let appearance = UINavigationBarAppearance()
-            appearance.configureWithDefaultBackground()
-            appearance.backgroundColor = .white
-            appearance.shadowColor = .clear
-
-            // Customize the navigation bar text
-            appearance.titleTextAttributes = [
-                .foregroundColor: UIColor.darkText,
-                .font: UIFont.systemFont(ofSize: 17, weight: .semibold),
-            ]
-
-            appearance.largeTitleTextAttributes = [
-                .foregroundColor: UIColor.darkText,
-                .font: UIFont.systemFont(ofSize: 28, weight: .bold),
-            ]
-
-            navigationController?.navigationBar.standardAppearance = appearance
-            navigationController?.navigationBar.scrollEdgeAppearance = appearance
-            navigationController?.navigationBar.isTranslucent = true
-        }
-    }
-
     override func viewDidLoad() {
         super.viewDidLoad()
-        self.title = options.title
         if options.enableUserLocation {
             locationManager.delegate = self
             locationManager.requestWhenInUseAuthorization()
             completer.delegate = self
         }
+        navigationController?.setNavigationBarHidden(true, animated: false)
         setupViews()
     }
 
@@ -352,7 +312,7 @@ class PlacePickerViewController: UIViewController {
         }
     }
 
-    // MARK: - Navigation bar buttons methods
+    // MARK: - Button action methods
     @objc private func pickUserLocation() {
         locationManager.requestLocation()
     }
@@ -396,7 +356,6 @@ class PlacePickerViewController: UIViewController {
 
     // MARK: - Private methods
     private func setLoading(_ state: Bool) {
-        pinImage.isHidden = state
         if state {
             pinLoading.startAnimating()
         } else {
@@ -421,16 +380,14 @@ class PlacePickerViewController: UIViewController {
                     self.setLoading(false)
                     self.endPinAnimation()
                     self.lastLocation = nil
-                    self.navigationItem.searchController?.searchBar.placeholder =
-                        self.options.searchPlaceholder
+                    self.customSearchBar.placeholder = self.options.searchPlaceholder
                     return
                 }
                 self.lastLocation = location?.first
                 if let name = location?.first?.name {
-                    self.navigationItem.searchController?.searchBar.placeholder = name
+                    self.customSearchBar.placeholder = name
                 } else {
-                    self.navigationItem.searchController?.searchBar.placeholder =
-                        self.options.searchPlaceholder
+                    self.customSearchBar.placeholder = self.options.searchPlaceholder
                 }
                 self.setLoading(false)
                 self.endPinAnimation()
@@ -444,10 +401,7 @@ class PlacePickerViewController: UIViewController {
         UIView.animate(
             withDuration: 0.3, delay: 0, options: [.curveEaseOut],
             animations: {
-                self.mapPin.transform = CGAffineTransform.identity.scaledBy(x: 1.2, y: 1.2)
-                    .translatedBy(x: 0, y: -15)
-
-                // Add a subtle spring effect
+                // Use shadow animation to indicate pin movement
                 self.mapPinShadow.transform = CGAffineTransform(scaleX: 1.5, y: 1.5)
                 self.mapPinShadow.alpha = 0.7
             })
@@ -460,18 +414,8 @@ class PlacePickerViewController: UIViewController {
             options: .calculationModeCubic,
             animations: {
                 UIView.addKeyframe(withRelativeStartTime: 0, relativeDuration: 0.5) {
-                    self.mapPin.transform = CGAffineTransform.identity
                     self.mapPinShadow.transform = CGAffineTransform.identity
                     self.mapPinShadow.alpha = 1.0
-                }
-
-                // Add a subtle bounce effect
-                UIView.addKeyframe(withRelativeStartTime: 0.5, relativeDuration: 0.2) {
-                    self.mapPin.transform = CGAffineTransform.identity.scaledBy(x: 1.1, y: 0.9)
-                }
-
-                UIView.addKeyframe(withRelativeStartTime: 0.7, relativeDuration: 0.3) {
-                    self.mapPin.transform = CGAffineTransform.identity
                 }
             }, completion: comp)
     }
@@ -488,13 +432,21 @@ extension PlacePickerViewController: MKMapViewDelegate {
 }
 
 extension PlacePickerViewController: UISearchBarDelegate {
+    func searchBar(_ searchBar: UISearchBar, textDidChange searchText: String) {
+        if !searchText.isEmpty {
+            completer.queryFragment = searchText
+        } else {
+            completerResults.removeAll()
+        }
+    }
+
     func searchBarShouldEndEditing(_ searchBar: UISearchBar) -> Bool {
         self.completerResults.removeAll()
         return true
     }
 
     func searchBarSearchButtonClicked(_ searchBar: UISearchBar) {
-        //        print("DID SEARCH")
+        searchBar.resignFirstResponder()
     }
 }
 
@@ -525,8 +477,8 @@ extension PlacePickerViewController: DropDownButtonDelegate {
                     return
                 }
                 self?.mapView.setCenter(coords, animated: true)
-                self?.searchController.searchBar.text = ""
-                self?.searchController.isActive = false
+                self?.customSearchBar.text = ""
+                self?.customSearchBar.resignFirstResponder()
             }
         }
     }
