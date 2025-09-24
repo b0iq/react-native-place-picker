@@ -157,18 +157,16 @@ class PlacePickerViewController: UIViewController {
         if #available(iOS 15.0, *) {
             var config = UIButton.Configuration.plain()
             config.baseForegroundColor = UIColor(options.color)
-            // config.title = "Cancel" // Removed title
             if #available(iOS 13.0, *) {
                 config.image = UIImage(
                     systemName: "xmark",
                     withConfiguration: UIImage.SymbolConfiguration(pointSize: 16, weight: .bold))
-                // config.imagePadding = 8 // Not needed for icon-only
             }
             config.contentInsets = NSDirectionalEdgeInsets(
-                top: 8, leading: 8, bottom: 8, trailing: 8)  // Symmetrical for icon
-            config.background.strokeColor = nil  // Removed border
-            config.background.strokeWidth = 0  // Removed border
-            config.background.cornerRadius = 8  // Kept rounded corners for shape
+                top: 8, leading: 8, bottom: 8, trailing: 8)
+            config.background.strokeColor = nil
+            config.background.strokeWidth = 0
+            config.background.cornerRadius = 8
             customCancelButton.configuration = config
         } else {
             customCancelButton.tintColor = UIColor(options.color)
@@ -177,11 +175,13 @@ class PlacePickerViewController: UIViewController {
                     systemName: "xmark",
                     withConfiguration: UIImage.SymbolConfiguration(pointSize: 16, weight: .bold))
                 customCancelButton.setImage(cancelImage, for: .normal)
-                // customCancelButton.setTitle("Cancel", for: .normal) // Removed title
-                // customCancelButton.titleEdgeInsets = UIEdgeInsets(top: 0, left: 4, bottom: 0, right: -4) // Not needed for icon-only
             } else {
-                // customCancelButton.setTitle("Cancel", for: .normal) // Removed title
+                // For iOS versions prior to 13, system images are not available.
+                // Ensure a title is set and give it a background for better visibility.
+                customCancelButton.setTitle("Cancel", for: .normal)
             }
+            // Add a background color for older iOS versions to make the button stand out
+            customCancelButton.backgroundColor = UIColor(white: 0.95, alpha: 1.0)  // Light gray background
             // customCancelButton.titleLabel?.font = UIFont.systemFont(ofSize: 16, weight: .semibold) // Not needed for icon-only
             customCancelButton.layer.cornerRadius = 8  // Kept rounded corners for shape
             customCancelButton.layer.borderColor = nil  // Removed border
@@ -228,8 +228,8 @@ class PlacePickerViewController: UIViewController {
             }
             config.contentInsets = NSDirectionalEdgeInsets(
                 top: 8, leading: 8, bottom: 8, trailing: 8)
-            config.background.strokeColor = nil  // Removed border
-            config.background.strokeWidth = 0  // Removed border
+            config.background.strokeColor = nil
+            config.background.strokeWidth = 0
             config.background.cornerRadius = 8
             customUserLocationButton.configuration = config
         } else {
@@ -240,8 +240,12 @@ class PlacePickerViewController: UIViewController {
                     withConfiguration: UIImage.SymbolConfiguration(pointSize: 16, weight: .bold))
                 customUserLocationButton.setImage(locationImage, for: .normal)
             } else {
-                customUserLocationButton.setTitle("location", for: .normal)
+                // For iOS versions prior to 13, system images are not available.
+                // Ensure a title is set and give it a background for better visibility.
+                customUserLocationButton.setTitle("Location", for: .normal)  // Ensure title is set
             }
+            // Add a background color for older iOS versions to make the button stand out
+            customUserLocationButton.backgroundColor = UIColor(white: 0.95, alpha: 1.0)  // Light gray background
             customUserLocationButton.layer.cornerRadius = 8
             customUserLocationButton.layer.borderColor = nil  // Removed border
             customUserLocationButton.layer.borderWidth = 0  // Removed border
