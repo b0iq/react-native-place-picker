@@ -14,4 +14,22 @@ struct PlacePickerResult: Record {
     var address: PlacePickerAddress?
     @Field
     var didCancel: Bool
+    @Field
+    var radius: Double?
+    @Field
+    var radiusCoordinates: RadiusCoordinates?
+}
+
+struct BoundsCoordinates: Record {
+    @Field
+    var northeast: PlacePickerCoordinate
+    @Field
+    var southwest: PlacePickerCoordinate
+}
+
+struct RadiusCoordinates: Record {
+    @Field
+    var center: PlacePickerCoordinate
+    @Field
+    var bounds: BoundsCoordinates
 }

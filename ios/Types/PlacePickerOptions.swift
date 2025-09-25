@@ -32,4 +32,18 @@ struct PlacePickerOptions: Record {
     var enableLargeTitle: Bool = true
     @Field
     var rejectOnCancel: Bool = true
+    @Field
+    var enableRangeSelection: Bool = false
+    @Field
+    var initialRadius: Double = 1000
+    @Field
+    var minRadius: Double = 100
+    @Field
+    var maxRadius: Double = 10000
+    @Field
+    var radiusColor: String = ""
+    @Field
+    var radiusStrokeColor: String = ""
+    @Field
+    var radiusStrokeWidth: Double = 2
 }
