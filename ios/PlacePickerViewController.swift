@@ -27,6 +27,20 @@ class PlacePickerViewController: UIViewController {
     private let geocoder = CLGeocoder()
     private let locationManager = CLLocationManager()
 
+    // MARK: - Custom Colors
+    // A primary accent color that adapts to light and dark modes.
+    // For light mode: Black
+    // For dark mode: White
+    private lazy var accentColor: UIColor = {
+        return .label  // System color that is black in light mode, white in dark mode
+    }()
+
+    // A contrasting color to be used on top of the accent color.
+    // White generally provides good contrast against black.
+    private lazy var onAccentColor: UIColor = {
+        return .systemBackground  // System color that is white in light mode, black in dark mode
+    }()
+
     // MARK: - Inits
     init(_ options: PlacePickerOptions, _ promise: Promise) {
         self.promise = promise
@@ -40,7 +54,7 @@ class PlacePickerViewController: UIViewController {
     // MARK: - UI Views
     private lazy var mapPinShadow: UIView = {
         let shadowView = UIView()
-        shadowView.backgroundColor = UIColor(options.color).withAlphaComponent(0.5)
+        shadowView.backgroundColor = UIColor.black.withAlphaComponent(0.5)  // Black shadow
         shadowView.translatesAutoresizingMaskIntoConstraints = false
         shadowView.layer.cornerRadius = 2.5
         return shadowView
@@ -53,20 +67,20 @@ class PlacePickerViewController: UIViewController {
             pinImage = UIImageView(image: UIImage(named: "mappin"))
         }
         pinImage.contentMode = .center
-        pinImage.tintColor = UIColor(options.contrastColor)
+        pinImage.tintColor = onAccentColor  // White in light, black in dark
         pinImage.frame = CGRect(x: 0, y: 0, width: 40, height: 40)
         return pinImage
     }()
     private lazy var pinLoading: UIActivityIndicatorView = {
         let loader = UIActivityIndicatorView(frame: CGRect(x: 0, y: 0, width: 40, height: 40))
-        loader.color = UIColor(options.contrastColor)
+        loader.color = onAccentColor  // White in light, black in dark
         loader.hidesWhenStopped = true
         return loader
     }()
     private lazy var mapPinContentView: UIView = {
         let pinContainer = UIView(frame: CGRect(x: 5, y: 4, width: 40, height: 40))
         pinContainer.layer.cornerRadius = 20
-        pinContainer.backgroundColor = UIColor(options.color)
+        pinContainer.backgroundColor = accentColor  // Black in light, white in dark
         pinContainer.addSubview(pinImage)
         pinContainer.addSubview(pinLoading)
         return pinContainer
@@ -80,7 +94,7 @@ class PlacePickerViewController: UIViewController {
         path.addLine(to: CGPoint(x: 20, y: 43))
         let shape = CAShapeLayer()
         shape.path = path
-        shape.fillColor = UIColor(options.color).cgColor
+        shape.fillColor = accentColor.cgColor  // Black in light, white in dark
         let pinView = UIView()
         pinView.layer.insertSublayer(shape, at: 0)
         pinView.addSubview(mapPinContentView)
@@ -156,7 +170,7 @@ class PlacePickerViewController: UIViewController {
 
         if #available(iOS 15.0, *) {
             var config = UIButton.Configuration.plain()
-            config.baseForegroundColor = UIColor(options.color)
+            config.baseForegroundColor = accentColor  // Black in light, white in dark
             if #available(iOS 13.0, *) {
                 config.image = UIImage(
                     systemName: "xmark",
@@ -169,25 +183,29 @@ class PlacePickerViewController: UIViewController {
             config.background.cornerRadius = 8
             customCancelButton.configuration = config
         } else {
-            customCancelButton.tintColor = UIColor(options.color)
+            // This block applies to iOS versions below 15.0
+            customCancelButton.tintColor = accentColor  // Black in light, white in dark
             if #available(iOS 13.0, *) {
+                // This block applies to iOS versions 13.0 - 14.x
                 let cancelImage = UIImage(
                     systemName: "xmark",
                     withConfiguration: UIImage.SymbolConfiguration(pointSize: 16, weight: .bold))
                 customCancelButton.setImage(cancelImage, for: .normal)
             } else {
+                // This block applies to iOS versions below 13.0 (i.e., iOS 12 and earlier)
                 // For iOS versions prior to 13, system images are not available.
                 // Ensure a title is set and give it a background for better visibility.
                 customCancelButton.setTitle("Cancel", for: .normal)
+                // Change tintColor (text color) to match foreground (black/white)
+                customCancelButton.tintColor = .label
             }
-            // Add a background color for older iOS versions to make the button stand out
-            customCancelButton.backgroundColor = UIColor(white: 0.95, alpha: 1.0)  // Light gray background
-            // customCancelButton.titleLabel?.font = UIFont.systemFont(ofSize: 16, weight: .semibold) // Not needed for icon-only
-            customCancelButton.layer.cornerRadius = 8  // Kept rounded corners for shape
-            customCancelButton.layer.borderColor = nil  // Removed border
-            customCancelButton.layer.borderWidth = 0  // Removed border
+            // Change background color for older iOS versions to clear
+            customCancelButton.backgroundColor = .clear
+            customCancelButton.layer.cornerRadius = 8
+            customCancelButton.layer.borderColor = nil
+            customCancelButton.layer.borderWidth = 0
             customCancelButton.contentEdgeInsets = UIEdgeInsets(
-                top: 8, left: 8, bottom: 8, right: 8)  // Symmetrical for icon
+                top: 8, left: 8, bottom: 8, right: 8)
         }
 
         // MARK: - 2 Make submit button (Shad CN primary)
@@ -196,19 +214,21 @@ class PlacePickerViewController: UIViewController {
 
         if #available(iOS 15.0, *) {
             var config = UIButton.Configuration.filled()
-            config.baseBackgroundColor = UIColor(options.color)
-            config.baseForegroundColor = UIColor(options.contrastColor)
+            config.baseBackgroundColor = accentColor  // Black in light, white in dark
+            config.baseForegroundColor = onAccentColor  // White in light, black in dark
             config.title = "Submit"
             config.contentInsets = NSDirectionalEdgeInsets(
                 top: 8, leading: 16, bottom: 8, trailing: 16)
-            config.background.cornerRadius = 16  // Made all rounded (half of estimated button height 32)
+            config.background.cornerRadius = 16
             customSubmitButton.configuration = config
         } else {
+            // This block applies to iOS versions below 15.0 (includes below 13)
             customSubmitButton.setTitle("Submit", for: .normal)
             customSubmitButton.titleLabel?.font = UIFont.systemFont(ofSize: 16, weight: .semibold)
-            customSubmitButton.backgroundColor = UIColor(options.color)
-            customSubmitButton.tintColor = UIColor(options.contrastColor)
-            customSubmitButton.layer.cornerRadius = 16  // Made all rounded (half of estimated button height 32)
+            // Change background color to match accent color (black/white)
+            customSubmitButton.backgroundColor = accentColor
+            customSubmitButton.tintColor = onAccentColor  // White in light, black in dark
+            customSubmitButton.layer.cornerRadius = 16
             customSubmitButton.contentEdgeInsets = UIEdgeInsets(
                 top: 8, left: 16, bottom: 8, right: 16)
         }
@@ -220,7 +240,7 @@ class PlacePickerViewController: UIViewController {
 
         if #available(iOS 15.0, *) {
             var config = UIButton.Configuration.plain()
-            config.baseForegroundColor = UIColor(options.color)
+            config.baseForegroundColor = accentColor  // Black in light, white in dark
             if #available(iOS 13.0, *) {
                 config.image = UIImage(
                     systemName: "location",
@@ -233,22 +253,27 @@ class PlacePickerViewController: UIViewController {
             config.background.cornerRadius = 8
             customUserLocationButton.configuration = config
         } else {
-            customUserLocationButton.tintColor = UIColor(options.color)
+            // This block applies to iOS versions below 15.0
+            customUserLocationButton.tintColor = accentColor  // Black in light, white in dark
             if #available(iOS 13.0, *) {
+                // This block applies to iOS versions 13.0 - 14.x
                 let locationImage = UIImage(
                     systemName: "location",
                     withConfiguration: UIImage.SymbolConfiguration(pointSize: 16, weight: .bold))
                 customUserLocationButton.setImage(locationImage, for: .normal)
             } else {
+                // This block applies to iOS versions below 13.0 (i.e., iOS 12 and earlier)
                 // For iOS versions prior to 13, system images are not available.
                 // Ensure a title is set and give it a background for better visibility.
-                customUserLocationButton.setTitle("Location", for: .normal)  // Ensure title is set
+                customUserLocationButton.setTitle("Location", for: .normal)
+                // Change tintColor (text color) to match foreground (black/white)
+                customUserLocationButton.tintColor = .label
             }
-            // Add a background color for older iOS versions to make the button stand out
-            customUserLocationButton.backgroundColor = UIColor(white: 0.95, alpha: 1.0)  // Light gray background
+            // Change background color for older iOS versions to clear
+            customUserLocationButton.backgroundColor = .clear
             customUserLocationButton.layer.cornerRadius = 8
-            customUserLocationButton.layer.borderColor = nil  // Removed border
-            customUserLocationButton.layer.borderWidth = 0  // Removed border
+            customUserLocationButton.layer.borderColor = nil
+            customUserLocationButton.layer.borderWidth = 0
             customUserLocationButton.contentEdgeInsets = UIEdgeInsets(
                 top: 8, left: 8, bottom: 8, right: 8)
         }
@@ -265,18 +290,18 @@ class PlacePickerViewController: UIViewController {
 
                 // Shad CN search bar styling
                 searchController.searchBar.searchTextField.backgroundColor =
-                    .secondarySystemBackground
+                    .secondarySystemBackground  // Already grayscale
                 searchController.searchBar.searchTextField.layer.cornerRadius = 8
                 searchController.searchBar.searchTextField.clipsToBounds = true
-                searchController.searchBar.tintColor = UIColor(options.color)  // Cursor tint
+                searchController.searchBar.tintColor = accentColor  // Cursor tint (black/white)
                 // Changed to systemBackground for consistency with the navigation bar background
-                searchController.searchBar.barTintColor = .systemBackground
-                searchController.searchBar.backgroundColor = .systemBackground
+                searchController.searchBar.barTintColor = .systemBackground  // Already grayscale
+                searchController.searchBar.backgroundColor = .systemBackground  // Already grayscale
             } else {
                 searchController.searchBar.setValue("OK", forKey: "cancelButtonText")
                 // Changed to systemBackground for consistency with the navigation bar background
-                searchController.searchBar.barTintColor = .systemBackground
-                searchController.searchBar.backgroundColor = .systemBackground
+                searchController.searchBar.barTintColor = .systemBackground  // Already grayscale
+                searchController.searchBar.backgroundColor = .systemBackground  // Already grayscale
             }
             searchController.searchBar.placeholder = options.searchPlaceholder
             searchController.searchBar.enablesReturnKeyAutomatically = true
@@ -315,12 +340,12 @@ class PlacePickerViewController: UIViewController {
             let appearance = UINavigationBarAppearance()
             // Configure with a solid background color for visibility
             appearance.configureWithOpaqueBackground()
-            appearance.backgroundColor = .systemBackground  // Use system background for visibility
+            appearance.backgroundColor = .systemBackground  // Use system background for visibility (already grayscale)
             appearance.shadowColor = nil  // Remove any shadow line if desired
 
             // Ensure title and large title text are visible against the chosen background
-            appearance.largeTitleTextAttributes = [.foregroundColor: UIColor.label]
-            appearance.titleTextAttributes = [.foregroundColor: UIColor.label]
+            appearance.largeTitleTextAttributes = [.foregroundColor: UIColor.label]  // Already grayscale
+            appearance.titleTextAttributes = [.foregroundColor: UIColor.label]  // Already grayscale
 
             navigationController?.navigationBar.standardAppearance = appearance
             navigationController?.navigationBar.scrollEdgeAppearance = appearance
@@ -331,7 +356,7 @@ class PlacePickerViewController: UIViewController {
             self.navigationController?.navigationBar.setBackgroundImage(nil, for: .default)
             self.navigationController?.navigationBar.shadowImage = nil
             self.navigationController?.navigationBar.isTranslucent = false
-            self.navigationController?.navigationBar.backgroundColor = .systemBackground  // Use system background for visibility
+            self.navigationController?.navigationBar.backgroundColor = .systemBackground  // Use system background for visibility (already grayscale)
         }
     }
     override func viewDidLoad() {
