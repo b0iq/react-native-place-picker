@@ -27,20 +27,6 @@ class PlacePickerViewController: UIViewController {
     private let geocoder = CLGeocoder()
     private let locationManager = CLLocationManager()
 
-    // MARK: - Custom Colors
-    // A primary accent color that adapts to light and dark modes.
-    // For light mode: Black
-    // For dark mode: White
-    private lazy var accentColor: UIColor = {
-        return .label  // System color that is black in light mode, white in dark mode
-    }()
-
-    // A contrasting color to be used on top of the accent color.
-    // White generally provides good contrast against black.
-    private lazy var onAccentColor: UIColor = {
-        return .systemBackground  // System color that is white in light mode, black in dark mode
-    }()
-
     // MARK: - Inits
     init(_ options: PlacePickerOptions, _ promise: Promise) {
         self.promise = promise
@@ -54,7 +40,8 @@ class PlacePickerViewController: UIViewController {
     // MARK: - UI Views
     private lazy var mapPinShadow: UIView = {
         let shadowView = UIView()
-        shadowView.backgroundColor = UIColor.black.withAlphaComponent(0.5)  // Black shadow
+        // Use a fixed black for shadow, as it generally looks good on any background
+        shadowView.backgroundColor = UIColor.black.withAlphaComponent(0.3)
         shadowView.translatesAutoresizingMaskIntoConstraints = false
         shadowView.layer.cornerRadius = 2.5
         return shadowView
@@ -67,20 +54,23 @@ class PlacePickerViewController: UIViewController {
             pinImage = UIImageView(image: UIImage(named: "mappin"))
         }
         pinImage.contentMode = .center
-        pinImage.tintColor = onAccentColor  // White in light, black in dark
+        // Use system background color for contrast with the pin's label color
+        pinImage.tintColor = .systemBackground
         pinImage.frame = CGRect(x: 0, y: 0, width: 40, height: 40)
         return pinImage
     }()
     private lazy var pinLoading: UIActivityIndicatorView = {
         let loader = UIActivityIndicatorView(frame: CGRect(x: 0, y: 0, width: 40, height: 40))
-        loader.color = onAccentColor  // White in light, black in dark
+        // Use system background color for contrast with the pin's label color
+        loader.color = .systemBackground
         loader.hidesWhenStopped = true
         return loader
     }()
     private lazy var mapPinContentView: UIView = {
         let pinContainer = UIView(frame: CGRect(x: 5, y: 4, width: 40, height: 40))
         pinContainer.layer.cornerRadius = 20
-        pinContainer.backgroundColor = accentColor  // Black in light, white in dark
+        // Use label color (adaptive black/white) for the pin's main body
+        pinContainer.backgroundColor = .label
         pinContainer.addSubview(pinImage)
         pinContainer.addSubview(pinLoading)
         return pinContainer
@@ -94,7 +84,8 @@ class PlacePickerViewController: UIViewController {
         path.addLine(to: CGPoint(x: 20, y: 43))
         let shape = CAShapeLayer()
         shape.path = path
-        shape.fillColor = accentColor.cgColor  // Black in light, white in dark
+        // Use label color (adaptive black/white) for the pin's triangle
+        shape.fillColor = UIColor.label.cgColor
         let pinView = UIView()
         pinView.layer.insertSublayer(shape, at: 0)
         pinView.addSubview(mapPinContentView)
@@ -132,6 +123,8 @@ class PlacePickerViewController: UIViewController {
         NSLayoutConstraint.activate([
             mapView.widthAnchor.constraint(equalTo: self.view.widthAnchor),
             mapView.heightAnchor.constraint(equalTo: self.view.heightAnchor),
+            //            mapView.leadingAnchor.constraint(equalTo: self.view.leadingAnchor),
+            //            mapView.trailingAnchor.constraint(equalTo: self.view.trailingAnchor),
         ])
         self.view.addSubview(mapPinShadow)
         NSLayoutConstraint.activate([
@@ -164,122 +157,58 @@ class PlacePickerViewController: UIViewController {
         setupNavigationBar()
     }
     private func setupNavigationBar() {
-        // MARK: - 1 Make cancel button (Shad CN secondary/outline)
-        let customCancelButton = UIButton(type: .system)
+        // MARK: - 1 Make cancel button
+        let customCancelButton = UIButton()
+        // Use label color (adaptive black/white) for button tint
+        customCancelButton.tintColor = .label
+        if #available(iOS 13.0, *) {
+            let cancelImage = UIImage(
+                systemName: "xmark",
+                withConfiguration: UIImage.SymbolConfiguration(pointSize: 16, weight: .bold))
+            customCancelButton.setImage(cancelImage, for: .normal)
+        } else {
+            customCancelButton.setTitle("Cancel", for: .normal)
+        }
         customCancelButton.addTarget(self, action: #selector(closePicker), for: .touchUpInside)
 
-        if #available(iOS 15.0, *) {
-            var config = UIButton.Configuration.plain()
-            config.baseForegroundColor = accentColor  // Black in light, white in dark
-            if #available(iOS 13.0, *) {
-                config.image = UIImage(
-                    systemName: "xmark",
-                    withConfiguration: UIImage.SymbolConfiguration(pointSize: 16, weight: .bold))
-            }
-            config.contentInsets = NSDirectionalEdgeInsets(
-                top: 8, leading: 8, bottom: 8, trailing: 8)
-            config.background.strokeColor = nil
-            config.background.strokeWidth = 0
-            config.background.cornerRadius = 8
-            customCancelButton.configuration = config
+        // MARK: - 2 Make done button
+        let customDoneButton = UIButton()
+        // Use label color (adaptive black/white) for button tint
+        customDoneButton.tintColor = .label
+        if #available(iOS 13.0, *) {
+            let checkImage = UIImage(
+                systemName: "checkmark",
+                withConfiguration: UIImage.SymbolConfiguration(pointSize: 16, weight: .bold))
+            customDoneButton.setImage(checkImage, for: .normal)
         } else {
-            // This block applies to iOS versions below 15.0
-            customCancelButton.tintColor = accentColor  // Black in light, white in dark
-            if #available(iOS 13.0, *) {
-                // This block applies to iOS versions 13.0 - 14.x
-                let cancelImage = UIImage(
-                    systemName: "xmark",
-                    withConfiguration: UIImage.SymbolConfiguration(pointSize: 16, weight: .bold))
-                customCancelButton.setImage(cancelImage, for: .normal)
-            } else {
-                // This block applies to iOS versions below 13.0 (i.e., iOS 12 and earlier)
-                // For iOS versions prior to 13, system images are not available.
-                // Ensure a title is set and give it a background for better visibility.
-                customCancelButton.setTitle("Cancel", for: .normal)
-                // Change tintColor (text color) to match foreground (black/white)
-                customCancelButton.tintColor = .label
-            }
-            // Change background color for older iOS versions to clear
-            customCancelButton.backgroundColor = .clear
-            customCancelButton.layer.cornerRadius = 8
-            customCancelButton.layer.borderColor = nil
-            customCancelButton.layer.borderWidth = 0
-            customCancelButton.contentEdgeInsets = UIEdgeInsets(
-                top: 8, left: 8, bottom: 8, right: 8)
+            customDoneButton.setTitle("Done", for: .normal)
         }
+        customDoneButton.addTarget(self, action: #selector(finalizePicker), for: .touchUpInside)
 
-        // MARK: - 2 Make submit button (Shad CN primary)
-        let customSubmitButton = UIButton(type: .system)
-        customSubmitButton.addTarget(self, action: #selector(finalizePicker), for: .touchUpInside)
-
-        if #available(iOS 15.0, *) {
-            var config = UIButton.Configuration.filled()
-            config.baseBackgroundColor = accentColor  // Black in light, white in dark
-            config.baseForegroundColor = onAccentColor  // White in light, black in dark
-            config.title = "Submit"
-            config.contentInsets = NSDirectionalEdgeInsets(
-                top: 8, leading: 16, bottom: 8, trailing: 16)
-            config.background.cornerRadius = 16
-            customSubmitButton.configuration = config
+        // MARK: - 3 Make user location button
+        let customUserLocationButton = UIButton()
+        // Use label color (adaptive black/white) for button tint
+        customUserLocationButton.tintColor = .label
+        if #available(iOS 13.0, *) {
+            let checkImage = UIImage(
+                systemName: "location",
+                withConfiguration: UIImage.SymbolConfiguration(pointSize: 16, weight: .bold))
+            customUserLocationButton.setImage(checkImage, for: .normal)
         } else {
-            // This block applies to iOS versions below 15.0 (includes below 13)
-            customSubmitButton.setTitle("Submit", for: .normal)
-            customSubmitButton.titleLabel?.font = UIFont.systemFont(ofSize: 16, weight: .semibold)
-            // Change background color to match accent color (black/white)
-            customSubmitButton.backgroundColor = accentColor
-            customSubmitButton.tintColor = onAccentColor  // White in light, black in dark
-            customSubmitButton.layer.cornerRadius = 16
-            customSubmitButton.contentEdgeInsets = UIEdgeInsets(
-                top: 8, left: 16, bottom: 8, right: 16)
+            customUserLocationButton.setTitle("location", for: .normal)
         }
-
-        // MARK: - 3 Make user location button (Shad CN secondary/icon-only)
-        let customUserLocationButton = UIButton(type: .system)
         customUserLocationButton.addTarget(
             self, action: #selector(pickUserLocation), for: .touchUpInside)
 
         if #available(iOS 15.0, *) {
-            var config = UIButton.Configuration.plain()
-            config.baseForegroundColor = accentColor  // Black in light, white in dark
-            if #available(iOS 13.0, *) {
-                config.image = UIImage(
-                    systemName: "location",
-                    withConfiguration: UIImage.SymbolConfiguration(pointSize: 16, weight: .bold))
-            }
-            config.contentInsets = NSDirectionalEdgeInsets(
-                top: 8, leading: 8, bottom: 8, trailing: 8)
-            config.background.strokeColor = nil
-            config.background.strokeWidth = 0
-            config.background.cornerRadius = 8
-            customUserLocationButton.configuration = config
-        } else {
-            // This block applies to iOS versions below 15.0
-            customUserLocationButton.tintColor = accentColor  // Black in light, white in dark
-            if #available(iOS 13.0, *) {
-                // This block applies to iOS versions 13.0 - 14.x
-                let locationImage = UIImage(
-                    systemName: "location",
-                    withConfiguration: UIImage.SymbolConfiguration(pointSize: 16, weight: .bold))
-                customUserLocationButton.setImage(locationImage, for: .normal)
-            } else {
-                // This block applies to iOS versions below 13.0 (i.e., iOS 12 and earlier)
-                // For iOS versions prior to 13, system images are not available.
-                // Ensure a title is set and give it a background for better visibility.
-                customUserLocationButton.setTitle("Location", for: .normal)
-                // Change tintColor (text color) to match foreground (black/white)
-                customUserLocationButton.tintColor = .label
-            }
-            // Change background color for older iOS versions to clear
-            customUserLocationButton.backgroundColor = .clear
-            customUserLocationButton.layer.cornerRadius = 8
-            customUserLocationButton.layer.borderColor = nil
-            customUserLocationButton.layer.borderWidth = 0
-            customUserLocationButton.contentEdgeInsets = UIEdgeInsets(
-                top: 8, left: 8, bottom: 8, right: 8)
+            // These configurations will automatically pick up the tintColor
+            customDoneButton.configuration = .borderedTinted()
+            customCancelButton.configuration = .bordered()  // Changed from .borderedProminent() to match other buttons' style
+            customUserLocationButton.configuration = .bordered()
         }
 
         let customCancelButtonItem = UIBarButtonItem(customView: customCancelButton)
-        let customSubmitButtonItem = UIBarButtonItem(customView: customSubmitButton)
+        let customDoneButtonItem = UIBarButtonItem(customView: customDoneButton)
         let customUserLocationButtonItem = UIBarButtonItem(customView: customUserLocationButton)
 
         if options.enableSearch {
@@ -288,29 +217,24 @@ class PlacePickerViewController: UIViewController {
                 searchController.searchBar.searchTextField.clearButtonMode = .whileEditing
                 searchController.searchBar.showsCancelButton = false
 
-                // Shad CN search bar styling
+                // Black and white theme for search bar elements
+                searchController.searchBar.searchTextField.textColor = .label
                 searchController.searchBar.searchTextField.backgroundColor =
-                    .secondarySystemBackground  // Already grayscale
-                searchController.searchBar.searchTextField.layer.cornerRadius = 8
-                searchController.searchBar.searchTextField.clipsToBounds = true
-                searchController.searchBar.tintColor = accentColor  // Cursor tint (black/white)
-                // Changed to systemBackground for consistency with the navigation bar background
-                searchController.searchBar.barTintColor = .systemBackground  // Already grayscale
-                searchController.searchBar.backgroundColor = .systemBackground  // Already grayscale
+                    .secondarySystemBackground
+                searchController.searchBar.searchTextField.leftView?.tintColor = .label  // Search icon
             } else {
                 searchController.searchBar.setValue("OK", forKey: "cancelButtonText")
-                // Changed to systemBackground for consistency with the navigation bar background
-                searchController.searchBar.barTintColor = .systemBackground  // Already grayscale
-                searchController.searchBar.backgroundColor = .systemBackground  // Already grayscale
             }
             searchController.searchBar.placeholder = options.searchPlaceholder
             searchController.searchBar.enablesReturnKeyAutomatically = true
             searchController.searchBar.returnKeyType = .search
+            searchController.searchBar.tintColor = .label  // Cursor color and potential cancel button
+            searchController.searchBar.barTintColor = .systemBackground  // Background behind the search field
 
             searchController.searchResultsUpdater = self
             searchController.searchBar.delegate = self
             searchController.obscuresBackgroundDuringPresentation = false
-            searchController.hidesNavigationBarDuringPresentation = false  // Keep search bar always visible
+            searchController.hidesNavigationBarDuringPresentation = false
             navigationItem.hidesSearchBarWhenScrolling = false
             definesPresentationContext = true
             navigationItem.searchController = searchController
@@ -319,13 +243,8 @@ class PlacePickerViewController: UIViewController {
         if options.enableLargeTitle {
             self.navigationItem.largeTitleDisplayMode = .automatic
             self.navigationController?.navigationBar.prefersLargeTitles = true
-        } else {
-            // Ensure title is inline if large title is not preferred, for consistency with search bar below title.
-            self.navigationItem.largeTitleDisplayMode = .never
-            self.navigationController?.navigationBar.prefersLargeTitles = false
         }
-
-        var rightItems = [customSubmitButtonItem]
+        var rightItems = [customDoneButtonItem]
         if options.enableUserLocation {
             rightItems.append(customUserLocationButtonItem)
         }
@@ -335,33 +254,29 @@ class PlacePickerViewController: UIViewController {
 
     // MARK: - UIViewController Lifecycle
     override func viewWillAppear(_ animated: Bool) {
-        super.viewWillAppear(animated)
         if #available(iOS 13, *) {
             let appearance = UINavigationBarAppearance()
-            // Configure with a solid background color for visibility
+            // Configure with an opaque background to prevent transparency
             appearance.configureWithOpaqueBackground()
-            appearance.backgroundColor = .systemBackground  // Use system background for visibility (already grayscale)
-            appearance.shadowColor = nil  // Remove any shadow line if desired
-
-            // Ensure title and large title text are visible against the chosen background
-            appearance.largeTitleTextAttributes = [.foregroundColor: UIColor.label]  // Already grayscale
-            appearance.titleTextAttributes = [.foregroundColor: UIColor.label]  // Already grayscale
+            // Explicitly set background color to system background (adaptive black/white)
+            appearance.backgroundColor = .systemBackground
+            // Set title text attributes to label color for black/white theme
+            appearance.titleTextAttributes = [.foregroundColor: UIColor.label]
+            appearance.largeTitleTextAttributes = [.foregroundColor: UIColor.label]
+            // Optionally remove the shadow line under the navigation bar
+            appearance.shadowColor = .clear
 
             navigationController?.navigationBar.standardAppearance = appearance
             navigationController?.navigationBar.scrollEdgeAppearance = appearance
-            navigationController?.navigationBar.compactAppearance = appearance
-            navigationController?.navigationBar.isTranslucent = false  // Set to false with opaque background
-        } else {
-            // Fallback for older iOS: Make navigation bar opaque
-            self.navigationController?.navigationBar.setBackgroundImage(nil, for: .default)
-            self.navigationController?.navigationBar.shadowImage = nil
-            self.navigationController?.navigationBar.isTranslucent = false
-            self.navigationController?.navigationBar.backgroundColor = .systemBackground  // Use system background for visibility (already grayscale)
+            // Ensure the navigation bar is not translucent to prevent blurring map content
+            navigationController?.navigationBar.isTranslucent = false
         }
     }
     override func viewDidLoad() {
         super.viewDidLoad()
         self.title = options.title
+        // Set the view's background color to system background for consistency
+        self.view.backgroundColor = .systemBackground
         if options.enableUserLocation {
             locationManager.delegate = self
             locationManager.requestWhenInUseAuthorization()
@@ -456,17 +371,38 @@ class PlacePickerViewController: UIViewController {
                     self.setLoading(false)
                     self.endPinAnimation()
                     self.lastLocation = nil
-                    // Update search bar placeholder with default if error
-                    self.navigationItem.searchController?.searchBar.placeholder =
-                        self.options.searchPlaceholder
+                    // Ensure search bar placeholder text color is readable
+                    if #available(iOS 13.0, *) {
+                        self.navigationItem.searchController?.searchBar.searchTextField
+                            .attributedPlaceholder = NSAttributedString(
+                                string: self.options.searchPlaceholder,
+                                attributes: [.foregroundColor: UIColor.secondaryLabel])
+                    } else {
+                        self.navigationItem.searchController?.searchBar.placeholder =
+                            self.options.searchPlaceholder
+                    }
                     return
                 }
                 self.lastLocation = location?.first
                 if let name = location?.first?.name {
-                    self.navigationItem.searchController?.searchBar.placeholder = name
+                    if #available(iOS 13.0, *) {
+                        self.navigationItem.searchController?.searchBar.searchTextField
+                            .attributedPlaceholder = NSAttributedString(
+                                string: name, attributes: [.foregroundColor: UIColor.secondaryLabel]
+                            )
+                    } else {
+                        self.navigationItem.searchController?.searchBar.placeholder = name
+                    }
                 } else {
-                    self.navigationItem.searchController?.searchBar.placeholder =
-                        self.options.searchPlaceholder
+                    if #available(iOS 13.0, *) {
+                        self.navigationItem.searchController?.searchBar.searchTextField
+                            .attributedPlaceholder = NSAttributedString(
+                                string: self.options.searchPlaceholder,
+                                attributes: [.foregroundColor: UIColor.secondaryLabel])
+                    } else {
+                        self.navigationItem.searchController?.searchBar.placeholder =
+                            self.options.searchPlaceholder
+                    }
                 }
                 self.setLoading(false)
                 self.endPinAnimation()
