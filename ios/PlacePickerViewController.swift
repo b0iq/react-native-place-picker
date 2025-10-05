@@ -13,7 +13,7 @@ class PlacePickerViewController: UIViewController {
     // MARK: - Variables
     private var promise: Promise?
     private let options: PlacePickerOptions
-    private let searchController = UISearchController()
+    // Removed: private let searchController = UISearchController()
     private let completer = MKLocalSearchCompleter()
     private var completerResults: [CustomSearchCompletion] = [] {
         didSet {
@@ -26,6 +26,7 @@ class PlacePickerViewController: UIViewController {
     private var mapMoveDebounceTimer: Timer?
     private let geocoder = CLGeocoder()
     private let locationManager = CLLocationManager()
+    private var shouldCenterMapOnUserLocationUpdate: Bool = false  // New flag to control map centering
 
     // MARK: - Inits
     init(_ options: PlacePickerOptions, _ promise: Promise) {
@@ -116,6 +117,34 @@ class PlacePickerViewController: UIViewController {
         return view
     }()
 
+    private lazy var searchTextField: UITextField = {
+        let textField = UITextField()
+        textField.placeholder = options.searchPlaceholder
+        textField.returnKeyType = .search
+        textField.enablesReturnKeyAutomatically = true
+        textField.clearButtonMode = .whileEditing
+        textField.translatesAutoresizingMaskIntoConstraints = false
+
+        if #available(iOS 13.0, *) {
+            textField.textColor = .label
+            textField.backgroundColor = .secondarySystemBackground
+            // Add search icon
+            let searchIcon = UIImageView(image: UIImage(systemName: "magnifyingglass"))
+            searchIcon.tintColor = .label
+            searchIcon.contentMode = .scaleAspectFit
+            let leftView = UIView(frame: CGRect(x: 0, y: 0, width: 30, height: 20))
+            searchIcon.frame = CGRect(x: 5, y: 0, width: 20, height: 20)
+            leftView.addSubview(searchIcon)
+            textField.leftView = leftView
+            textField.leftViewMode = .always
+            textField.layer.cornerRadius = 10  // Rounded corners for modern look
+            textField.clipsToBounds = true
+        } else {
+            textField.borderStyle = .roundedRect
+        }
+        return textField
+    }()
+
     // MARK: - UI setup methods
     private func setupViews() {
         // MARK: - 1 Setup map view
@@ -123,9 +152,30 @@ class PlacePickerViewController: UIViewController {
         NSLayoutConstraint.activate([
             mapView.widthAnchor.constraint(equalTo: self.view.widthAnchor),
             mapView.heightAnchor.constraint(equalTo: self.view.heightAnchor),
-            //            mapView.leadingAnchor.constraint(equalTo: self.view.leadingAnchor),
-            //            mapView.trailingAnchor.constraint(equalTo: self.view.trailingAnchor),
         ])
+
+        var topAnchorForSearchResultContainer: NSLayoutYAxisAnchor = self.view.safeAreaLayoutGuide
+            .topAnchor
+
+        if options.enableSearch {
+            // Add search text field below the navigation bar with padding
+            self.view.addSubview(searchTextField)
+            searchTextField.delegate = self
+            searchTextField.addTarget(
+                self, action: #selector(searchTextFieldDidChange(_:)), for: .editingChanged)
+
+            NSLayoutConstraint.activate([
+                searchTextField.topAnchor.constraint(
+                    equalTo: self.view.safeAreaLayoutGuide.topAnchor, constant: 10),  // Padding from top
+                searchTextField.leadingAnchor.constraint(
+                    equalTo: self.view.leadingAnchor, constant: 16),  // Left padding
+                searchTextField.trailingAnchor.constraint(
+                    equalTo: self.view.trailingAnchor, constant: -16),  // Right padding
+                searchTextField.heightAnchor.constraint(equalToConstant: 40),  // Standard height
+            ])
+            topAnchorForSearchResultContainer = searchTextField.bottomAnchor
+        }
+
         self.view.addSubview(mapPinShadow)
         NSLayoutConstraint.activate([
             mapPinShadow.centerXAnchor.constraint(equalTo: self.view.centerXAnchor),
@@ -144,11 +194,12 @@ class PlacePickerViewController: UIViewController {
             mapPin.widthAnchor.constraint(equalToConstant: 50),
             mapPin.heightAnchor.constraint(equalToConstant: 50),
         ])
+
         self.view.addSubview(searchResultContainer)
         NSLayoutConstraint.activate([
-            searchResultContainer.widthAnchor.constraint(equalTo: self.view.widthAnchor),
-            searchResultContainer.topAnchor.constraint(
-                equalTo: self.view.safeAreaLayoutGuide.topAnchor),
+            searchResultContainer.topAnchor.constraint(equalTo: topAnchorForSearchResultContainer),
+            searchResultContainer.leadingAnchor.constraint(equalTo: self.view.leadingAnchor),
+            searchResultContainer.trailingAnchor.constraint(equalTo: self.view.trailingAnchor),
             searchResultContainer.bottomAnchor.constraint(equalTo: self.view.bottomAnchor),
         ])
 
@@ -203,7 +254,7 @@ class PlacePickerViewController: UIViewController {
         if #available(iOS 15.0, *) {
             // These configurations will automatically pick up the tintColor
             customDoneButton.configuration = .borderedTinted()
-            customCancelButton.configuration = .bordered()  // Changed from .borderedProminent() to match other buttons' style
+            customCancelButton.configuration = .bordered()
             customUserLocationButton.configuration = .bordered()
         }
 
@@ -212,32 +263,9 @@ class PlacePickerViewController: UIViewController {
         let customUserLocationButtonItem = UIBarButtonItem(customView: customUserLocationButton)
 
         if options.enableSearch {
-            if #available(iOS 13.0, *) {
-                searchController.automaticallyShowsCancelButton = true
-                searchController.searchBar.searchTextField.clearButtonMode = .whileEditing
-                searchController.searchBar.showsCancelButton = false
-
-                // Black and white theme for search bar elements
-                searchController.searchBar.searchTextField.textColor = .label
-                searchController.searchBar.searchTextField.backgroundColor =
-                    .secondarySystemBackground
-                searchController.searchBar.searchTextField.leftView?.tintColor = .label  // Search icon
-            } else {
-                searchController.searchBar.setValue("OK", forKey: "cancelButtonText")
-            }
-            searchController.searchBar.placeholder = options.searchPlaceholder
-            searchController.searchBar.enablesReturnKeyAutomatically = true
-            searchController.searchBar.returnKeyType = .search
-            searchController.searchBar.tintColor = .label  // Cursor color and potential cancel button
-            searchController.searchBar.barTintColor = .systemBackground  // Background behind the search field
-
-            searchController.searchResultsUpdater = self
-            searchController.searchBar.delegate = self
-            searchController.obscuresBackgroundDuringPresentation = false
-            searchController.hidesNavigationBarDuringPresentation = false
-            navigationItem.hidesSearchBarWhenScrolling = false
-            definesPresentationContext = true
-            navigationItem.searchController = searchController
+            // The searchTextField is now a subview of the controller's view,
+            // not part of the navigation bar's titleView.
+            // Delegate and target actions are set in setupViews().
         }
 
         if options.enableLargeTitle {
@@ -254,6 +282,7 @@ class PlacePickerViewController: UIViewController {
 
     // MARK: - UIViewController Lifecycle
     override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
         if #available(iOS 13, *) {
             let appearance = UINavigationBarAppearance()
             // Configure with an opaque background to prevent transparency
@@ -286,9 +315,10 @@ class PlacePickerViewController: UIViewController {
     }
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
-        mapView.centerCoordinate = CLLocationCoordinate2D(
-            latitude: options.initialCoordinates.latitude,
-            longitude: options.initialCoordinates.longitude)
+        // Removed this line to prevent map recentering on layout changes (e.g., keyboard appearance)
+        // mapView.centerCoordinate = CLLocationCoordinate2D(
+        //     latitude: options.initialCoordinates.latitude,
+        //     longitude: options.initialCoordinates.longitude)
         mapView.delegate = self
     }
     override func viewSafeAreaInsetsDidChange() {
@@ -301,6 +331,7 @@ class PlacePickerViewController: UIViewController {
         }
     }
     override func viewDidDisappear(_ animated: Bool) {
+        super.viewDidDisappear(animated)
         if promise != nil && options.rejectOnCancel {
             promise?.reject("dismissed", "Modal closed by user")
         }
@@ -308,6 +339,7 @@ class PlacePickerViewController: UIViewController {
 
     // MARK: - Navigation bar buttons methods
     @objc private func pickUserLocation() {
+        shouldCenterMapOnUserLocationUpdate = true  // Set flag to true before requesting location
         locationManager.requestLocation()
     }
     @objc private func closePicker() {
@@ -373,12 +405,11 @@ class PlacePickerViewController: UIViewController {
                     self.lastLocation = nil
                     // Ensure search bar placeholder text color is readable
                     if #available(iOS 13.0, *) {
-                        self.navigationItem.searchController?.searchBar.searchTextField
-                            .attributedPlaceholder = NSAttributedString(
-                                string: self.options.searchPlaceholder,
-                                attributes: [.foregroundColor: UIColor.secondaryLabel])
+                        self.searchTextField.attributedPlaceholder = NSAttributedString(
+                            string: self.options.searchPlaceholder,
+                            attributes: [.foregroundColor: UIColor.secondaryLabel])
                     } else {
-                        self.navigationItem.searchController?.searchBar.placeholder =
+                        self.searchTextField.placeholder =
                             self.options.searchPlaceholder
                     }
                     return
@@ -386,21 +417,19 @@ class PlacePickerViewController: UIViewController {
                 self.lastLocation = location?.first
                 if let name = location?.first?.name {
                     if #available(iOS 13.0, *) {
-                        self.navigationItem.searchController?.searchBar.searchTextField
-                            .attributedPlaceholder = NSAttributedString(
-                                string: name, attributes: [.foregroundColor: UIColor.secondaryLabel]
-                            )
+                        self.searchTextField.attributedPlaceholder = NSAttributedString(
+                            string: name, attributes: [.foregroundColor: UIColor.secondaryLabel]
+                        )
                     } else {
-                        self.navigationItem.searchController?.searchBar.placeholder = name
+                        self.searchTextField.placeholder = name
                     }
                 } else {
                     if #available(iOS 13.0, *) {
-                        self.navigationItem.searchController?.searchBar.searchTextField
-                            .attributedPlaceholder = NSAttributedString(
-                                string: self.options.searchPlaceholder,
-                                attributes: [.foregroundColor: UIColor.secondaryLabel])
+                        self.searchTextField.attributedPlaceholder = NSAttributedString(
+                            string: self.options.searchPlaceholder,
+                            attributes: [.foregroundColor: UIColor.secondaryLabel])
                     } else {
-                        self.navigationItem.searchController?.searchBar.placeholder =
+                        self.searchTextField.placeholder =
                             self.options.searchPlaceholder
                     }
                 }
@@ -462,23 +491,20 @@ extension PlacePickerViewController: MKMapViewDelegate {
     }
 
 }
-extension PlacePickerViewController: UISearchBarDelegate {
-    func searchBarShouldEndEditing(_ searchBar: UISearchBar) -> Bool {
-        self.completerResults.removeAll()
-        return true
-    }
-    func searchBarSearchButtonClicked(_ searchBar: UISearchBar) {
-        //        print("DID SEARCH")
-    }
-}
+
+// Removed: extension PlacePickerViewController: UISearchBarDelegate
+
 extension PlacePickerViewController: CLLocationManagerDelegate {
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
-        if let coordinate = locations.first?.coordinate {
+        // Only center the map if explicitly requested by the user tapping the location button
+        if shouldCenterMapOnUserLocationUpdate, let coordinate = locations.first?.coordinate {
             mapView.setCenter(coordinate, animated: true)
+            shouldCenterMapOnUserLocationUpdate = false  // Reset the flag after centering
         }
     }
     func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
         print(error)
+        shouldCenterMapOnUserLocationUpdate = false  // Reset flag on failure
     }
 }
 extension PlacePickerViewController: DropDownButtonDelegate {
@@ -495,9 +521,10 @@ extension PlacePickerViewController: DropDownButtonDelegate {
                 guard error == nil, let coords = result?.mapItems.first?.placemark.coordinate else {
                     return
                 }
+                // When a place is selected, explicitly center the map on that location
                 self?.mapView.setCenter(coords, animated: true)
-                self?.searchController.searchBar.text = ""
-                self?.searchController.isActive = false
+                self?.searchTextField.text = ""
+                self?.searchTextField.resignFirstResponder()  // Dismiss keyboard
             }
         }
     }
@@ -512,12 +539,31 @@ extension PlacePickerViewController: MKLocalSearchCompleterDelegate {
         }
     }
 }
-extension PlacePickerViewController: UISearchResultsUpdating {
-    func updateSearchResults(for searchController: UISearchController) {
-        if let searchText = searchController.searchBar.text, !searchText.isEmpty {
+
+// Removed: extension PlacePickerViewController: UISearchResultsUpdating
+
+extension PlacePickerViewController: UITextFieldDelegate {
+    @objc private func searchTextFieldDidChange(_ textField: UITextField) {
+        if let searchText = textField.text, !searchText.isEmpty {
             completer.queryFragment = searchText
         } else {
             completerResults.removeAll()
         }
+    }
+
+    func textFieldDidBeginEditing(_ textField: UITextField) {
+        searchResultContainer.isHidden =
+            completerResults.count < 1 && textField.text?.isEmpty ?? true
+    }
+
+    func textFieldDidEndEditing(_ textField: UITextField) {
+        searchResultContainer.isHidden = true
+        completerResults.removeAll()  // Clear results when editing ends
+    }
+
+    func textFieldShouldReturn(_ textField: UITextField) -> Bool {
+        textField.resignFirstResponder()  // Dismiss keyboard on return
+        // You could also trigger a full search here if desired
+        return true
     }
 }
