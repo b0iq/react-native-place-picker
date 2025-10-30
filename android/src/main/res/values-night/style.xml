@@ -1,8 +1,8 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <!-- Base application theme: light mode -->
+    <!-- Base application theme: Dark mode -->
     <style name="Theme.PlacePickerTheme" parent="Theme.AppCompat.DayNight">
-        <item name="colorPrimary">#FFF</item> <!-- Toolbar background: white (light mode) -->
-        <item name="colorOnPrimary">@color/colorOnPrimary</item> <!-- Icon/text color: dark (light mode) -->
+        <item name="colorPrimary">#222</item> <!-- Toolbar background: dark (Dark mode) -->
+        <item name="colorOnPrimary">@color/colorOnPrimary</item> <!-- Icon/text color: white (Dark mode) -->
         <!-- ActionBar/Toolbar style overrides -->
         <item name="android:actionBarStyle">@style/MyActionBar</item>
         <item name="android:toolbarStyle">@style/MyToolbar</item>
@@ -10,7 +10,6 @@
         <item name="android:windowLightStatusBar">true</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>
         <item name="android:statusBarColor">@android:color/transparent</item>
-
     </style>
 
     <!-- Custom ActionBar Style -->

@@ -17,6 +17,7 @@ import android.widget.SearchView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
+import androidx.core.graphics.toColorInt
 import androidx.core.view.WindowCompat
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
@@ -68,7 +69,7 @@ class PlacePickerActivity : AppCompatActivity(), OnMapReadyCallback,
 
     private fun gatherViews() {
         pinView = findViewById(R.id.pinView)
-        pinView.background.setTint(Color.parseColor(PlacePickerState.globalOptions.color))
+        pinView.background.setTint(PlacePickerState.globalOptions.color.toColorInt())
         val scaleXVal: PropertyValuesHolder = PropertyValuesHolder.ofFloat("scaleX", 1.5F)
         val scaleYVal: PropertyValuesHolder = PropertyValuesHolder.ofFloat("scaleY", 1.5F)
         val transVal: PropertyValuesHolder = PropertyValuesHolder.ofFloat("translationY", -50F)
