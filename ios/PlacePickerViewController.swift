@@ -148,7 +148,11 @@ class PlacePickerViewController: UIViewController {
     private func setupNavigationBar() {
         // MARK: - 1 Make cancel button
         let customCancelButton = UIButton()
-        customCancelButton.tintColor = UIColor(options.color)
+        if #available(iOS 26.0, *) {
+            customCancelButton.tintColor = UIColor.clear
+        } else {
+            customCancelButton.tintColor = UIColor(options.color)
+        }
         if #available(iOS 13.0, *) {
             let cancelImage = UIImage(systemName: "xmark", withConfiguration: UIImage.SymbolConfiguration(pointSize: 16, weight: .bold))
             customCancelButton.setImage(cancelImage, for: .normal)
@@ -402,7 +406,7 @@ extension PlacePickerViewController: DropDownButtonDelegate {
             let search = MKLocalSearch(request: request)
             search.start { [weak self] (result, error) in
                 guard error == nil, let coords = result?.mapItems.first?.placemark.coordinate else {return}
-                self?.mapView.setCenter(coords, animated: true)
+                self?.mapView.setCenter(coords, animated: false)
                 self?.searchController.searchBar.text = ""
                 self?.searchController.isActive = false
             }
