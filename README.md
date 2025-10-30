@@ -85,6 +85,14 @@ pickPlace({
   enableUserLocation: true,
   enableGeocoding: true,
   color: "#FF00FF",
+  // Range selection (optional)
+  enableRangeSelection: true,
+  initialRadius: 2000,
+  minRadius: 250,
+  maxRadius: 10000,
+  radiusColor: '#FF00FF33',
+  radiusStrokeColor: '#FF00FF',
+  radiusStrokeWidth: 2,
   //...etc
 })
   .then(console.log)
@@ -133,6 +141,13 @@ pickPlace().then(console.log).catch(console.log);
 | `enableUserLocation` | `boolean`                                | current user position button. Requires setup.                                         | `true`                                      |
 | `enableLargeTitle`   | `boolean`                                | large navigation bar title of the UIViewController. **iOS only**                      | `true`                                      |
 | `rejectOnCancel`     | `boolean`                                | Reject and return nothing if the user dismisses the window without selecting a place. | `true`                                      |
+| `enableRangeSelection` | `boolean`                              | Enable draggable radius selection overlay.                                            | `false`                                     |
+| `initialRadius`        | `number`                               | Initial radius in meters when range selection is enabled.                             | `1000`                                      |
+| `minRadius`            | `number`                               | Minimum allowed radius in meters.                                                     | `100`                                       |
+| `maxRadius`            | `number`                               | Maximum allowed radius in meters.                                                     | `10000`                                     |
+| `radiusColor`          | `string`                               | Fill color of radius circle (falls back to `color` with alpha).                       | `''`                                        |
+| `radiusStrokeColor`    | `string`                               | Stroke color of radius circle (falls back to `color`).                                | `''`                                        |
+| `radiusStrokeWidth`    | `number`                               | Stroke width of radius circle in pixels.                                              | `2`                                         |
 
 ### PlacePickerPresentationStyle
 
@@ -166,6 +181,8 @@ pickPlace().then(console.log).catch(console.log);
 | `coordinate` | `PlacePickerCoordinate` | Selected coordinate.                                           |
 | `address`    | `PlacePickerAddress`    | Geocoded address for selected location (if `enableGeocoding`). |
 | `didCancel`  | `boolean`               | Indicates if the place picker was canceled without selecting.  |
+| `radius`     | `number`                | Selected radius in meters (if range selection enabled).        |
+| `radiusCoordinates` | `{ center, bounds }`     | Center and bounds of the selected area.                        |
 
 ## Contributing
 

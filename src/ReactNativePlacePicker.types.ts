@@ -92,6 +92,46 @@ export interface PlacePickerOptions {
    * @default true
    */
   rejectOnCancel?: boolean;
+  /**
+   * @description Enable draggable radius selection overlay on the map.
+   * @type boolean
+   * @default false
+   */
+  enableRangeSelection?: boolean;
+  /**
+   * @description Initial radius in meters when range selection is enabled.
+   * @type number
+   * @default 1000
+   */
+  initialRadius?: number;
+  /**
+   * @description Minimum allowed radius in meters when dragging the handle.
+   * @type number
+   * @default 100
+   */
+  minRadius?: number;
+  /**
+   * @description Maximum allowed radius in meters when dragging the handle.
+   * @type number
+   * @default 10000
+   */
+  maxRadius?: number;
+  /**
+   * @description Fill color of radius circle (hex or rgba). Uses `color` with alpha if not provided.
+   * @type string
+   */
+  radiusColor?: string;
+  /**
+   * @description Stroke color of radius circle.
+   * @type string
+   */
+  radiusStrokeColor?: string;
+  /**
+   * @description Stroke width of radius circle in pixels.
+   * @type number
+   * @default 2
+   */
+  radiusStrokeWidth?: number;
 }
 
 export interface PlacePickerResults {
@@ -108,4 +148,18 @@ export interface PlacePickerResults {
    * @description Did cancel the place picker window without selecting.
    */
   didCancel: boolean;
+  /**
+   * @description Selected radius in meters if `enableRangeSelection` is true.
+   */
+  radius?: number;
+  /**
+   * @description Geometry of the selected radius area.
+   */
+  radiusCoordinates?: {
+    center: PlacePickerCoordinate;
+    bounds: {
+      northeast: PlacePickerCoordinate;
+      southwest: PlacePickerCoordinate;
+    };
+  };
 }

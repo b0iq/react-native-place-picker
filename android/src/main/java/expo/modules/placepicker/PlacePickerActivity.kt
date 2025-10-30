@@ -26,6 +26,8 @@ import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.OnMapReadyCallback
 import com.google.android.gms.maps.SupportMapFragment
 import com.google.android.gms.maps.model.LatLng
+import com.google.android.gms.maps.model.Circle
+import com.google.android.gms.maps.model.CircleOptions
 import java.util.Locale
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledFuture
@@ -41,6 +43,10 @@ class PlacePickerActivity : AppCompatActivity(), OnMapReadyCallback,
     private lateinit var pinViewAnimation: ObjectAnimator
     private var mLocationProvider: FusedLocationProviderClient? = null
     private lateinit var geocoder: Geocoder
+    private var radiusCircle: Circle? = null
+    private var currentRadius: Double = 1000.0
+    private var radiusHandle: View? = null
+    private var isDragging: Boolean = false
 
     private fun getLocationProvider(): FusedLocationProviderClient {
         if (mLocationProvider == null) {
@@ -65,6 +71,10 @@ class PlacePickerActivity : AppCompatActivity(), OnMapReadyCallback,
             )
         this.title = PlacePickerState.globalOptions.title
         supportActionBar?.subtitle = ""
+        if (PlacePickerState.globalOptions.enableRangeSelection) {
+            currentRadius = PlacePickerState.globalOptions.initialRadius
+                .coerceIn(PlacePickerState.globalOptions.minRadius, PlacePickerState.globalOptions.maxRadius)
+        }
     }
 
     private fun gatherViews() {
@@ -105,6 +115,9 @@ class PlacePickerActivity : AppCompatActivity(), OnMapReadyCallback,
                 ), 15F
             )
         )
+        if (PlacePickerState.globalOptions.enableRangeSelection) {
+            setupRadiusSelection()
+        }
     }
 
     override fun onCameraMoveStarted(reason: Int) {
@@ -121,6 +134,10 @@ class PlacePickerActivity : AppCompatActivity(), OnMapReadyCallback,
         if (!PlacePickerState.globalOptions.enableGeocoding) {
             pinViewAnimation.reverse()
             animationIsUp = false
+            if (PlacePickerState.globalOptions.enableRangeSelection) {
+                updateRadiusHandlePosition()
+                updateCircle()
+            }
             return
         }
         mapMoveTask?.cancel(true)
@@ -135,10 +152,18 @@ class PlacePickerActivity : AppCompatActivity(), OnMapReadyCallback,
                     supportActionBar?.subtitle = lastAddress?.featureName ?: "Unknown location"
                     pinViewAnimation.reverse()
                     animationIsUp = false
+                    if (PlacePickerState.globalOptions.enableRangeSelection) {
+                        updateRadiusHandlePosition()
+                        updateCircle()
+                    }
                 } catch (e: Exception) {
                     supportActionBar?.subtitle = ""
                     pinViewAnimation.reverse()
                     animationIsUp = false
+                    if (PlacePickerState.globalOptions.enableRangeSelection) {
+                        updateRadiusHandlePosition()
+                        updateCircle()
+                    }
                 }
             }
         }, 1, TimeUnit.SECONDS)
@@ -295,6 +320,9 @@ class PlacePickerActivity : AppCompatActivity(), OnMapReadyCallback,
                         country = add?.countryName ?: ""
                     }
                 }
+                if (PlacePickerState.globalOptions.enableRangeSelection) {
+                    appendRadiusData()
+                }
                 if (item.itemId == R.id.action_done) {
                     PlacePickerState.globalResult.didCancel = false
                     PlacePickerState.globalPromise?.resolve(PlacePickerState.globalResult)
@@ -315,4 +343,121 @@ class PlacePickerActivity : AppCompatActivity(), OnMapReadyCallback,
         return true
     }
 
+    // Radius helpers
+    private fun setupRadiusSelection() {
+        setupRadiusHandle()
+        updateCircle()
+        updateRadiusHandlePosition()
+    }
+
+    private fun updateCircle() {
+        radiusCircle?.remove()
+        radiusCircle = mMap.addCircle(
+            CircleOptions()
+                .center(mMap.cameraPosition.target)
+                .radius(currentRadius)
+                .fillColor(parseFillColor())
+                .strokeColor(parseStrokeColor())
+                .strokeWidth(PlacePickerState.globalOptions.radiusStrokeWidth.toFloat())
+        )
+    }
+
+    private fun setupRadiusHandle() {
+        if (radiusHandle != null) return
+        val handle = View(this)
+        val size = 56
+        handle.layoutParams = android.view.ViewGroup.LayoutParams(size, size)
+        handle.background = pinView.background.mutate()
+        handle.background.setTint(Color.parseColor(PlacePickerState.globalOptions.color))
+        handle.setOnTouchListener { _, event ->
+            when (event.action) {
+                android.view.MotionEvent.ACTION_DOWN -> {
+                    isDragging = true
+                    true
+                }
+                android.view.MotionEvent.ACTION_MOVE -> {
+                    if (!isDragging) return@setOnTouchListener true
+                    val centerScreen = mMap.projection.toScreenLocation(mMap.cameraPosition.target)
+                    val dx = event.rawX - centerScreen.x
+                    val dy = event.rawY - centerScreen.y
+                    val distancePx = kotlin.math.sqrt(dx*dx + dy*dy)
+                    val metersPerPixel = metersPerPixelAtLatitude(mMap.cameraPosition.target.latitude)
+                    val newRadius = (distancePx * metersPerPixel).toDouble()
+                        .coerceIn(PlacePickerState.globalOptions.minRadius, PlacePickerState.globalOptions.maxRadius)
+                    currentRadius = newRadius
+                    updateRadiusHandlePosition()
+                    true
+                }
+                android.view.MotionEvent.ACTION_UP, android.view.MotionEvent.ACTION_CANCEL -> {
+                    isDragging = false
+                    updateCircle()
+                    true
+                }
+                else -> false
+            }
+        }
+        addContentView(handle, handle.layoutParams)
+        radiusHandle = handle
+    }
+
+    private fun updateRadiusHandlePosition() {
+        val handle = radiusHandle ?: return
+        val centerGeo = mMap.cameraPosition.target
+        val eastGeo = offsetCoordinate(centerGeo.latitude, centerGeo.longitude, currentRadius, 0.0)
+        val edgeScreen = mMap.projection.toScreenLocation(eastGeo)
+        handle.x = edgeScreen.x - handle.width / 2f
+        handle.y = edgeScreen.y - handle.height / 2f
+    }
+
+    private fun metersPerPixelAtLatitude(lat: Double): Float {
+        val earthCircumference = 40075016.686
+        val zoom = mMap.cameraPosition.zoom.toDouble()
+        val scale = Math.pow(2.0, zoom)
+        val metersPerPixel = (Math.cos(Math.toRadians(lat)) * earthCircumference) / (256.0 * scale)
+        return metersPerPixel.toFloat()
+    }
+
+    private fun parseFillColor(): Int {
+        val color = if (PlacePickerState.globalOptions.radiusColor.isNotEmpty()) PlacePickerState.globalOptions.radiusColor else PlacePickerState.globalOptions.color
+        val base = Color.parseColor(color)
+        return Color.argb(64, Color.red(base), Color.green(base), Color.blue(base))
+    }
+
+    private fun parseStrokeColor(): Int {
+        val color = if (PlacePickerState.globalOptions.radiusStrokeColor.isNotEmpty()) PlacePickerState.globalOptions.radiusStrokeColor else PlacePickerState.globalOptions.color
+        return Color.parseColor(color)
+    }
+
+    private fun appendRadiusData() {
+        PlacePickerState.globalResult.radius = currentRadius
+        val center = PlacePickerCoordinate().apply {
+            latitude = mMap.cameraPosition.target.latitude
+            longitude = mMap.cameraPosition.target.longitude
+        }
+        val ne = offsetCoordinate(center.latitude, center.longitude, currentRadius, currentRadius)
+        val sw = offsetCoordinate(center.latitude, center.longitude, -currentRadius, -currentRadius)
+        val bounds = BoundsCoordinates().apply {
+            northeast = PlacePickerCoordinate().apply {
+                latitude = ne.latitude
+                longitude = ne.longitude
+            }
+            southwest = PlacePickerCoordinate().apply {
+                latitude = sw.latitude
+                longitude = sw.longitude
+            }
+        }
+        PlacePickerState.globalResult.radiusCoordinates = RadiusCoordinates().apply {
+            this.center = center
+            this.bounds = bounds
+        }
+    }
+
+    private fun offsetCoordinate(lat: Double, lon: Double, metersEast: Double, metersNorth: Double): LatLng {
+        val earthRadius = 6378137.0
+        val dLat = metersNorth / earthRadius
+        val dLon = metersEast / (earthRadius * kotlin.math.cos(Math.toRadians(lat)))
+        val newLat = lat + Math.toDegrees(dLat)
+        val newLon = lon + Math.toDegrees(dLon)
+        return LatLng(newLat, newLon)
+    }
 }

@@ -39,4 +39,25 @@ class PlacePickerOptions : Record {
 
     @Field
     val rejectOnCancel: Boolean = true
+
+    @Field
+    val enableRangeSelection: Boolean = false
+
+    @Field
+    val initialRadius: Double = 1000.0
+
+    @Field
+    val minRadius: Double = 100.0
+
+    @Field
+    val maxRadius: Double = 10000.0
+
+    @Field
+    val radiusColor: String = ""
+
+    @Field
+    val radiusStrokeColor: String = ""
+
+    @Field
+    val radiusStrokeWidth: Double = 2.0
 }

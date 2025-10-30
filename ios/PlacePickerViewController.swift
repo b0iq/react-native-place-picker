@@ -27,6 +27,11 @@ class PlacePickerViewController: UIViewController {
     private var mapMoveDebounceTimer:Timer?
     private let geocoder = CLGeocoder()
     private let locationManager = CLLocationManager()
+    private var circleOverlay: MKCircle?
+    private var currentRadius: Double = 1000
+    private var radiusHandle: UIView?
+    private var radiusPanGesture: UIPanGestureRecognizer?
+    private var didSetInitialRegion: Bool = false
     
     // MARK: - Inits
     init(_ options: PlacePickerOptions,_ promise: Promise) {
@@ -245,11 +250,26 @@ class PlacePickerViewController: UIViewController {
             completer.delegate = self
         }
         setupViews()
+        if (options.enableRangeSelection) {
+            currentRadius = max(options.minRadius, min(options.maxRadius, options.initialRadius))
+            setupRadiusSelection()
+        }
     }
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
-        mapView.centerCoordinate = CLLocationCoordinate2D(latitude: options.initialCoordinates.latitude, longitude: options.initialCoordinates.longitude)
-        mapView.delegate = self
+        if !didSetInitialRegion {
+            let region = MKCoordinateRegion(
+                center: CLLocationCoordinate2D(latitude: options.initialCoordinates.latitude, longitude: options.initialCoordinates.longitude),
+                latitudinalMeters: 1000,
+                longitudinalMeters: 1000
+            )
+            mapView.setRegion(region, animated: false)
+            mapView.delegate = self
+            didSetInitialRegion = true
+        }
+        if options.enableRangeSelection {
+            updateRadiusHandlePosition()
+        }
     }
     override func viewSafeAreaInsetsDidChange() {
         super.viewSafeAreaInsetsDidChange()
@@ -276,10 +296,35 @@ class PlacePickerViewController: UIViewController {
                 promise?.reject("cancel", "User cancel the operation and `rejectOnCancel` is enabled")
             }
         } else {
+            let center = mapView.centerCoordinate
+            let ne = coordinateOffset(from: center, metersEast: currentRadius, metersNorth: currentRadius)
+            let sw = coordinateOffset(from: center, metersEast: -currentRadius, metersNorth: -currentRadius)
             let result = PlacePickerResult(
                 coordinate: .init(wrappedValue:  PlacePickerCoordinate(latitude: .init(wrappedValue: mapView.centerCoordinate.latitude), longitude: .init(wrappedValue: mapView.centerCoordinate.longitude))),
                 address: .init(wrappedValue: PlacePickerAddress(with: self.lastLocation)),
-                didCancel: .init(wrappedValue: true))
+                didCancel: .init(wrappedValue: true),
+                radius: .init(wrappedValue: currentRadius),
+                radiusCoordinates: .init(
+                    wrappedValue: RadiusCoordinates(
+                        center: .init(
+                            wrappedValue: PlacePickerCoordinate(
+                                latitude: .init(wrappedValue: mapView.centerCoordinate.latitude),
+                                longitude: .init(wrappedValue: mapView.centerCoordinate.longitude))),
+                        bounds: .init(
+                            wrappedValue: BoundsCoordinates(
+                                northeast: .init(
+                                    wrappedValue: PlacePickerCoordinate(
+                                        latitude: .init(
+                                            wrappedValue: ne.latitude),
+                                        longitude: .init(
+                                            wrappedValue: ne.longitude))),
+                                southwest: .init(
+                                    wrappedValue: PlacePickerCoordinate(
+                                        latitude: .init(
+                                            wrappedValue: sw.latitude),
+                                        longitude: .init(
+                                            wrappedValue: sw.longitude)))))))
+            )
             promise?.resolve(result)
         }
         promise = nil
@@ -288,10 +333,34 @@ class PlacePickerViewController: UIViewController {
         }
     }
     @objc private func finalizePicker() {
+        let center = mapView.centerCoordinate
+        let ne = coordinateOffset(from: center, metersEast: currentRadius, metersNorth: currentRadius)
+        let sw = coordinateOffset(from: center, metersEast: -currentRadius, metersNorth: -currentRadius)
         let result = PlacePickerResult(
             coordinate: .init(wrappedValue:  PlacePickerCoordinate(latitude: .init(wrappedValue: mapView.centerCoordinate.latitude), longitude: .init(wrappedValue: mapView.centerCoordinate.longitude))),
             address: .init(wrappedValue: PlacePickerAddress(with: self.lastLocation)),
-            didCancel: .init(wrappedValue: false))
+            didCancel: .init(wrappedValue: false),
+            radius: .init(wrappedValue: currentRadius),
+            radiusCoordinates: .init(
+                wrappedValue: RadiusCoordinates(
+                    center: .init(
+                        wrappedValue: PlacePickerCoordinate(
+                            latitude: .init(wrappedValue: mapView.centerCoordinate.latitude),
+                            longitude: .init(wrappedValue: mapView.centerCoordinate.longitude))),
+                    bounds: .init(
+                        wrappedValue: BoundsCoordinates(
+                            northeast: .init(
+                                wrappedValue: PlacePickerCoordinate(
+                                    latitude: .init(
+                                        wrappedValue: ne.latitude),
+                                    longitude: .init(
+                                        wrappedValue: ne.longitude))),
+                            southwest: .init(
+                                wrappedValue: PlacePickerCoordinate(
+                                    latitude: .init(
+                                        wrappedValue: sw.latitude),
+                                    longitude: .init(
+                                        wrappedValue: sw.longitude))))))))
         promise?.resolve(result)
         promise = nil
         DispatchQueue.main.async {
@@ -312,28 +381,36 @@ class PlacePickerViewController: UIViewController {
         startPinAnimation()
     }
     private func mapDidMove() {
-        if (options.enableGeocoding) {
-            setLoading(true)
-            geocoder.reverseGeocodeLocation(CLLocation(latitude: mapView.centerCoordinate.latitude, longitude: mapView.centerCoordinate.longitude), preferredLocale: Locale(identifier: options.locale)) { location, error in
-                if let _ = error {
+        mapMoveDebounceTimer?.invalidate()
+        mapMoveDebounceTimer = Timer.scheduledTimer(withTimeInterval: 0.25, repeats: false) {
+            [weak self] _ in guard let self = self else { return }
+            if (options.enableGeocoding) {
+                setLoading(true)
+                geocoder.reverseGeocodeLocation(CLLocation(latitude: mapView.centerCoordinate.latitude, longitude: mapView.centerCoordinate.longitude), preferredLocale: Locale(identifier: options.locale)) { location, error in
+                    if let _ = error {
+                        self.setLoading(false)
+                        self.endPinAnimation()
+                        self.lastLocation = nil
+                        self.navigationItem.searchController?.searchBar.placeholder = self.options.searchPlaceholder
+                        return
+                    }
+                    self.lastLocation = location?.first
+                    if let name = location?.first?.name {
+                        self.navigationItem.searchController?.searchBar.placeholder = name
+                    } else {
+                        self.navigationItem.searchController?.searchBar.placeholder = self.options.searchPlaceholder
+                    }
                     self.setLoading(false)
                     self.endPinAnimation()
-                    self.lastLocation = nil
-                    self.navigationItem.searchController?.searchBar.placeholder = self.options.searchPlaceholder
-                    return
-                }
-                self.lastLocation = location?.first
-                if let name = location?.first?.name {
-                    self.navigationItem.searchController?.searchBar.placeholder = name
-                } else {
-                    self.navigationItem.searchController?.searchBar.placeholder = self.options.searchPlaceholder
-                }
-                self.setLoading(false)
-                self.endPinAnimation()
                 
+                }
+            } else {
+                self.endPinAnimation()
             }
-        } else {
-            self.endPinAnimation()
+            if options.enableRangeSelection {
+                updateCircleOverlay()
+                updateRadiusHandlePosition()
+            }
         }
     }
     private func startPinAnimation() {
@@ -366,6 +443,82 @@ class PlacePickerViewController: UIViewController {
             }
         }, completion: comp)
     }
+
+    // MARK: - Radius selection helpers
+    private func setupRadiusSelection() {
+        updateCircleOverlay()
+        setupRadiusHandle()
+        updateRadiusHandlePosition()
+    }
+
+    private func updateCircleOverlay() {
+        if let overlay = circleOverlay {
+            mapView.removeOverlay(overlay)
+        }
+        let circle = MKCircle(center: mapView.centerCoordinate, radius: currentRadius)
+        circleOverlay = circle
+        mapView.addOverlay(circle)
+    }
+
+    private func setupRadiusHandle() {
+        if radiusHandle == nil {
+            let handle = UIView(frame: CGRect(x: 0, y: 0, width: 28, height: 28))
+            handle.layer.cornerRadius = 14
+            handle.layer.borderWidth = 2
+            handle.layer.borderColor = UIColor(options.contrastColor).cgColor
+            handle.backgroundColor = UIColor(options.color)
+            let pan = UIPanGestureRecognizer(target: self, action: #selector(handleRadiusPan(_:)))
+            handle.addGestureRecognizer(pan)
+            self.view.addSubview(handle)
+            self.radiusHandle = handle
+            self.radiusPanGesture = pan
+        }
+    }
+
+    @objc private func handleRadiusPan(_ gesture: UIPanGestureRecognizer) {
+        guard let handle = radiusHandle else { return }
+        let location = gesture.location(in: self.view)
+        let centerPoint = mapView.convert(mapView.centerCoordinate, toPointTo: self.view)
+        let dx = Double(location.x - centerPoint.x)
+        let dy = Double(location.y - centerPoint.y)
+        let distancePoints = sqrt(dx*dx + dy*dy)
+        let newRadiusMeters = pointsToMeters(points: distancePoints)
+        currentRadius = max(options.minRadius, min(options.maxRadius, newRadiusMeters))
+        updateRadiusHandlePosition()
+        if gesture.state == .ended {
+            updateCircleOverlay()
+        }
+        if gesture.state == .ended {
+            _ = handle
+        }
+    }
+
+    private func updateRadiusHandlePosition() {
+        guard let handle = radiusHandle else { return }
+        let center = mapView.centerCoordinate
+        let east = coordinateOffset(from: center, metersEast: currentRadius, metersNorth: 0)
+        let point = mapView.convert(east, toPointTo: self.view)
+        handle.center = point
+    }
+
+    private func pointsToMeters(points: Double) -> Double {
+        let center = mapView.centerCoordinate
+        let east = coordinateOffset(from: center, metersEast: 1.0, metersNorth: 0)
+        let p1 = mapView.convert(center, toPointTo: self.view)
+        let p2 = mapView.convert(east, toPointTo: self.view)
+        let oneMeterPoints = hypot(Double(p2.x - p1.x), Double(p2.y - p1.y))
+        if oneMeterPoints == 0 { return currentRadius }
+        return points / oneMeterPoints
+    }
+
+    private func coordinateOffset(from coord: CLLocationCoordinate2D, metersEast: Double, metersNorth: Double) -> CLLocationCoordinate2D {
+        let earthRadius = 6378137.0
+        let dLat = metersNorth / earthRadius
+        let dLon = metersEast / (earthRadius * cos(coord.latitude * .pi / 180))
+        let lat = coord.latitude + (dLat * 180 / .pi)
+        let lon = coord.longitude + (dLon * 180 / .pi)
+        return CLLocationCoordinate2D(latitude: lat, longitude: lon)
+    }
 }
 
 extension PlacePickerViewController: MKMapViewDelegate {
@@ -375,6 +528,18 @@ extension PlacePickerViewController: MKMapViewDelegate {
     }
     func mapView(_ mapView: MKMapView, regionWillChangeAnimated animated: Bool) {
         mapWillMove()
+    }
+    func mapView(_ mapView: MKMapView, rendererFor overlay: MKOverlay) -> MKOverlayRenderer {
+        if let circle = overlay as? MKCircle {
+            let renderer = MKCircleRenderer(circle: circle)
+            let fillColorHex = options.radiusColor.isEmpty ? options.color : options.radiusColor
+            let strokeColorHex = options.radiusStrokeColor.isEmpty ? options.color : options.radiusStrokeColor
+            renderer.fillColor = UIColor(fillColorHex).withAlphaComponent(0.2)
+            renderer.strokeColor = UIColor(strokeColorHex)
+            renderer.lineWidth = CGFloat(options.radiusStrokeWidth)
+            return renderer
+        }
+        return MKOverlayRenderer(overlay: overlay)
     }
     
 }
