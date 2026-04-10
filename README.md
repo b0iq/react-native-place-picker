@@ -1,3 +1,5 @@
+> ARCHIVED PLEASE USE [expo-location-picker](https://github.com/palmcode-ae/expo-location-picker)
+
 <p align="center">
       <a href="https://badge.fury.io/js/react-native-place-picker">
       <img alt="NPM Version" src="https://badge.fury.io/js/react-native-place-picker.svg" />
